@@ -1,0 +1,177 @@
+// DB 스키마에 대한 TypeScript 타입입니다.
+// supabase/migrations 의 스키마(PROJECT_SPEC 5.2)에 맞춰 손으로 작성했습니다.
+//
+// Supabase 프로젝트를 만든 뒤에는 아래 명령으로 자동 생성/갱신할 수 있습니다:
+//   npx supabase gen types typescript --project-id <PROJECT_REF> > lib/supabase/types.ts
+
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+// ── 도메인 enum (DDL의 CHECK 제약과 일치) ──────────────────
+export type LocationCategory = "cheongsanmyeon" | "eupnae";
+export type UserRole = "resident" | "admin";
+export type UserStatus = "active" | "suspended";
+export type VehicleCode = "A" | "B";
+export type ReservationStatus =
+  | "waiting"
+  | "confirmed"
+  | "cancelled"
+  | "completed";
+
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          phone: string;
+          name: string;
+          address: string | null;
+          role: UserRole;
+          status: UserStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          phone: string;
+          name: string;
+          address?: string | null;
+          role?: UserRole;
+          status?: UserStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          phone?: string;
+          name?: string;
+          address?: string | null;
+          role?: UserRole;
+          status?: UserStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      vehicles: {
+        Row: { id: number; code: VehicleCode; is_active: boolean };
+        Insert: { id?: number; code: VehicleCode; is_active?: boolean };
+        Update: { id?: number; code?: VehicleCode; is_active?: boolean };
+      };
+      locations: {
+        Row: {
+          id: number;
+          category: LocationCategory;
+          name: string;
+          emoji: string | null;
+          display_order: number;
+          is_active: boolean;
+        };
+        Insert: {
+          id?: number;
+          category: LocationCategory;
+          name: string;
+          emoji?: string | null;
+          display_order?: number;
+          is_active?: boolean;
+        };
+        Update: {
+          id?: number;
+          category?: LocationCategory;
+          name?: string;
+          emoji?: string | null;
+          display_order?: number;
+          is_active?: boolean;
+        };
+      };
+      time_slots: {
+        Row: { hour: number; label: string };
+        Insert: { hour: number; label: string };
+        Update: { hour?: number; label?: string };
+      };
+      reservations: {
+        Row: {
+          id: number;
+          user_id: string;
+          reservation_date: string;
+          hour: number;
+          persons: number;
+          departure_location_id: number;
+          arrival_location_id: number;
+          vehicle_id: number | null;
+          status: ReservationStatus;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          cancel_reason: string | null;
+          confirmed_at: string | null;
+          confirmed_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          reservation_date: string;
+          hour: number;
+          persons: number;
+          departure_location_id: number;
+          arrival_location_id: number;
+          vehicle_id?: number | null;
+          status?: ReservationStatus;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          cancel_reason?: string | null;
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          reservation_date?: string;
+          hour?: number;
+          persons?: number;
+          departure_location_id?: number;
+          arrival_location_id?: number;
+          vehicle_id?: number | null;
+          status?: ReservationStatus;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          cancel_reason?: string | null;
+          confirmed_at?: string | null;
+          confirmed_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+    };
+    Views: {
+      v_active_reservations: {
+        Row: {
+          id: number;
+          reservation_date: string;
+          hour: number;
+          vehicle_id: number | null;
+          persons: number;
+          departure_category: LocationCategory;
+          arrival_category: LocationCategory;
+          vehicle_code: VehicleCode | null;
+        };
+      };
+    };
+    Functions: {
+      // Phase 4에서 추가: create_reservation_atomic, assign_vehicle
+      is_admin: {
+        Args: Record<string, never>;
+        Returns: boolean;
+      };
+    };
+    Enums: Record<string, never>;
+  };
+}
