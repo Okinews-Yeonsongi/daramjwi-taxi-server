@@ -126,5 +126,40 @@
 
 ---
 
-## 마스터 데이터 (참고: 프론트가 Supabase에서 직접 읽어도 됨)
-`locations`, `time_slots`, `vehicles` 는 누구나 읽기 가능(RLS 허용). 예약 API는 Phase 4에서 추가됩니다.
+## 마스터 데이터 (로그인 불필요)
+
+### 6. GET `/api/locations`
+활성 장소 목록. 카테고리·표시순서로 정렬되어 있고, 카테고리별로도 묶어서 줍니다.
+
+**응답 200**
+```json
+{
+  "locations": [
+    { "id": 1, "category": "cheongsanmyeon", "name": "우리집", "emoji": "🏠", "display_order": 1 },
+    { "id": 4, "category": "eupnae", "name": "옥천성모병원", "emoji": "🏥", "display_order": 1 }
+  ],
+  "byCategory": {
+    "cheongsanmyeon": [ { "id": 1, "name": "우리집", ... }, ... ],
+    "eupnae": [ { "id": 4, "name": "옥천성모병원", ... }, ... ]
+  }
+}
+```
+- `category` 값: `"cheongsanmyeon"`(청산면) / `"eupnae"`(읍내)
+
+### 7. GET `/api/time-slots`
+운행 시간 슬롯(9~18시) 목록.
+
+**응답 200**
+```json
+{
+  "timeSlots": [
+    { "hour": 9, "label": "오전 9시" },
+    { "hour": 10, "label": "오전 10시" },
+    { "hour": 18, "label": "오후 6시" }
+  ]
+}
+```
+
+---
+
+> 예약/가용성 API(`/api/availability`, `/api/reservations` 등)는 **Phase 4**에서 추가됩니다.
