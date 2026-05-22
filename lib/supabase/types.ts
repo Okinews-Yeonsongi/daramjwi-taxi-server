@@ -57,11 +57,13 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       vehicles: {
         Row: { id: number; code: VehicleCode; is_active: boolean };
         Insert: { id?: number; code: VehicleCode; is_active?: boolean };
         Update: { id?: number; code?: VehicleCode; is_active?: boolean };
+        Relationships: [];
       };
       locations: {
         Row: {
@@ -88,11 +90,13 @@ export interface Database {
           display_order?: number;
           is_active?: boolean;
         };
+        Relationships: [];
       };
       time_slots: {
         Row: { hour: number; label: string };
         Insert: { hour: number; label: string };
         Update: { hour?: number; label?: string };
+        Relationships: [];
       };
       reservations: {
         Row: {
@@ -149,6 +153,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: {
@@ -163,6 +168,7 @@ export interface Database {
           arrival_category: LocationCategory;
           vehicle_code: VehicleCode | null;
         };
+        Relationships: [];
       };
     };
     Functions: {
@@ -172,6 +178,7 @@ export interface Database {
         Returns: boolean;
       };
     };
-    Enums: Record<string, never>;
+    Enums: { [_ in never]: never };
+    CompositeTypes: { [_ in never]: never };
   };
 }
