@@ -211,4 +211,42 @@
 | 409 | `NO_VEHICLE` | 마감(방금 다른 분이 예약) |
 | 401 | — | 로그인 필요 |
 
-> 내 예약 조회/취소(`/api/reservations/me`, 취소)는 **Phase 5**, 이장님 확정/취소는 **Phase 7** 에서 추가됩니다.
+### 11. GET `/api/reservations/me`  🔒
+내 예약 목록 (오늘 이후, 취소 제외). 장소명·시간라벨·차량코드까지 채워서 줍니다.
+
+**응답 200**
+```json
+{
+  "reservations": [
+    {
+      "id": 12,
+      "reservation_date": "2026-05-23",
+      "hour": 10,
+      "time_label": "오전 10시",
+      "persons": 2,
+      "status": "waiting",
+      "departure": { "id": 1, "name": "우리집", "emoji": "🏠", "category": "cheongsanmyeon" },
+      "arrival": { "id": 4, "name": "옥천성모병원", "emoji": "🏥", "category": "eupnae" },
+      "vehicle_code": "A",
+      "confirmed_at": null, "cancelled_at": null, "cancel_reason": null,
+      "created_at": "..."
+    }
+  ]
+}
+```
+
+### 12. PATCH `/api/reservations/:id/cancel`  🔒
+본인 예약 취소. **운행 시작 시각 이후엔 취소 불가.**
+
+**응답 200**
+```json
+{ "reservation": { "id": 12, "status": "cancelled", "cancelled_at": "...", ... } }
+```
+**에러**
+| status | 의미 |
+|---|---|
+| 400 | 이미 취소/완료된 예약, 또는 이미 운행 시작됨 |
+| 404 | 내 예약 중 그 id 없음 |
+| 401 | 로그인 필요 |
+
+> 오늘 운행/마을 현황은 **Phase 6**, 이장님 확정/취소·통계는 **Phase 7** 에서 추가됩니다.
