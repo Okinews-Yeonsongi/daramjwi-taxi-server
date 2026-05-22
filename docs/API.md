@@ -162,4 +162,53 @@
 
 ---
 
-> 예약/가용성 API(`/api/availability`, `/api/reservations` 등)는 **Phase 4**에서 추가됩니다.
+---
+
+## 예약 신청 (주민용) 🔒
+
+### 8. GET `/api/availability?date=YYYY-MM-DD&origin=cheongsanmyeon`
+그 날짜+출발지의 시간대별 잔여석/마감 여부.
+
+**응답 200**
+```json
+{
+  "date": "2026-05-23",
+  "origin": "cheongsanmyeon",
+  "slots": [
+    { "hour": 9,  "remaining": 4, "available": true,  "isPast": false },
+    { "hour": 10, "remaining": 0, "available": false, "isPast": false },
+    { "hour": 13, "remaining": 2, "available": true,  "isPast": false }
+  ]
+}
+```
+- `remaining`: 한 번에 신청 가능한 최대 인원(0~4) · `available`: 신청 가능 여부 · `isPast`: 지난 시간
+- `origin`: `"cheongsanmyeon"` 또는 `"eupnae"`
+
+### 9. GET `/api/availability/seats?date=YYYY-MM-DD&hour=10&origin=cheongsanmyeon`
+인원 선택 단계용 — 특정 시간의 잔여석.
+
+**응답 200**
+```json
+{ "date": "2026-05-23", "origin": "cheongsanmyeon", "hour": 10, "remaining": 2, "maxPersons": 2, "available": true }
+```
+
+### 10. POST `/api/reservations`
+예약 신청. 차량은 시스템이 자동 배정(합승 우선 → A 우선)하며, **대기(waiting)** 상태로 생성됩니다.
+
+**요청**
+```json
+{ "date": "2026-05-23", "hour": 10, "departure_id": 1, "arrival_id": 4, "persons": 2 }
+```
+**응답 201**
+```json
+{ "reservation": { "id": 12, "status": "waiting", "vehicle_id": 1, "hour": 10, "persons": 2, ... } }
+```
+**에러**
+| status | code | 의미 |
+|---|---|---|
+| 400 | — | 날짜/시간/인원/지역 입력 오류, 7일 범위·지난 시간 |
+| 400 | `SAME_CATEGORY` | 출발·도착이 같은 지역 |
+| 409 | `NO_VEHICLE` | 마감(방금 다른 분이 예약) |
+| 401 | — | 로그인 필요 |
+
+> 내 예약 조회/취소(`/api/reservations/me`, 취소)는 **Phase 5**, 이장님 확정/취소는 **Phase 7** 에서 추가됩니다.

@@ -172,10 +172,24 @@ export interface Database {
       };
     };
     Functions: {
-      // Phase 4에서 추가: create_reservation_atomic, assign_vehicle
       is_admin: {
         Args: Record<string, never>;
         Returns: boolean;
+      };
+      get_availability: {
+        Args: { p_date: string; p_origin: string };
+        Returns: { hour: number; remaining: number }[];
+      };
+      create_reservation_atomic: {
+        Args: {
+          p_user_id: string;
+          p_date: string;
+          p_hour: number;
+          p_departure_id: number;
+          p_arrival_id: number;
+          p_persons: number;
+        };
+        Returns: Database["public"]["Tables"]["reservations"]["Row"];
       };
     };
     Enums: { [_ in never]: never };
