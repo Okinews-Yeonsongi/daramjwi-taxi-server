@@ -73,7 +73,7 @@
     <h2>4. 이장님 (관리자)</h2>
     <button onclick="adminWaiting()">대기 예약 보기</button>
     <button onclick="call('/api/admin/dashboard')">대시보드</button>
-    <button onclick="call('/api/admin/profiles')">주민 목록</button>
+    <button onclick="adminProfiles()">주민 목록 (확정횟수)</button>
     <button onclick="call('/api/admin/stats')">이번달 통계</button>
     <div id="adminlist" class="list"></div>
   </div>
@@ -170,6 +170,13 @@ async function adminWaiting() {
     `<div class="item">#${x.id} ${x.reservation_date} ${x.time_label} · ${x.resident?.name}(${x.resident?.phone}) · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
      <button class="green" onclick="adminConfirm(${x.id})">확정</button>
      <button class="red" onclick="adminCancel(${x.id})">취소</button></div>`).join("") || "<div class='muted'>대기 예약 없음</div>";
+}
+async function adminProfiles() {
+  const r = await api("/api/admin/profiles");
+  log(`GET /api/admin/profiles  →  HTTP ${r.status}`, r.json);
+  const el = document.getElementById("adminlist");
+  el.innerHTML = (r.json.profiles||[]).map(p =>
+    `<div class="item">${p.name} <span class="muted">(${p.phone})</span> ${p.role==="admin"?"<span class='tag confirmed'>이장님</span>":""} · 확정 <b style="color:var(--p)">${p.confirmed_count}</b>회</div>`).join("") || "<div class='muted'>주민 없음</div>";
 }
 async function adminConfirm(id) {
   const r = await api(`/api/admin/reservations/${id}/confirm`, { method:"PATCH" });
