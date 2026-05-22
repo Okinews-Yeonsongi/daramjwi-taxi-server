@@ -249,4 +249,35 @@
 | 404 | 내 예약 중 그 id 없음 |
 | 401 | 로그인 필요 |
 
-> 오늘 운행/마을 현황은 **Phase 6**, 이장님 확정/취소·통계는 **Phase 7** 에서 추가됩니다.
+---
+
+## 운행·통계 (주민용) 🔒
+
+### 13. GET `/api/runs/today`
+오늘 전체 운행 일정. **차량(A/B) 식별과 개인정보는 노출하지 않습니다.**
+
+**응답 200**
+```json
+{
+  "date": "2026-05-22",
+  "runs": [
+    { "hour": 10, "time_label": "오전 10시", "origin": "cheongsanmyeon", "destination": "eupnae", "persons": 3, "seats_left": 1 },
+    { "hour": 14, "time_label": "오후 2시", "origin": "eupnae", "destination": "cheongsanmyeon", "persons": 1, "seats_left": 3 }
+  ]
+}
+```
+
+### 14. GET `/api/stats/village`
+마을 현황 (모두 confirmed 기준).
+
+**응답 200**
+```json
+{
+  "date": "2026-05-22",
+  "fare": 1700,
+  "daily":   { "used": 1, "limit": 4,   "remaining": 3 },
+  "monthly": { "used": 30, "limit": 112, "remaining": 82 }
+}
+```
+
+> 이장님용(확정/취소, 주민 관리, 통계)은 **Phase 7**, SMS 실제 발송은 **Phase 8** 에서 추가됩니다.
