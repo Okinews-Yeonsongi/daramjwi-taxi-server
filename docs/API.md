@@ -280,4 +280,31 @@
 }
 ```
 
-> 이장님용(확정/취소, 주민 관리, 통계)은 **Phase 7**, SMS 실제 발송은 **Phase 8** 에서 추가됩니다.
+---
+
+## 이장님(관리자)용 🔒(admin)
+모든 관리자 API는 `role='admin'` 인 계정의 토큰이 필요합니다. (아니면 403)
+
+### 15. GET `/api/admin/dashboard`
+오늘 요약. `{ date, fare, today: { waiting, confirmed, cancelled, completed, confirmed_persons }, limits: { daily, monthly } }`
+
+### 16. GET `/api/admin/reservations?status=waiting&date=YYYY-MM-DD`
+예약 필터 조회(둘 다 선택). 각 항목에 `resident:{name,phone}`, `departure/arrival`, `time_label`, `vehicle_code`, `cancel_reason` 포함.
+
+### 17. PATCH `/api/admin/reservations/:id/confirm`
+대기 예약 확정. 일/월 한도(4/112) 초과 시 `409`(code `DAILY_LIMIT`/`MONTHLY_LIMIT`). 성공 시 주민에게 확정 문자(현재 스텁).
+응답: `{ reservation: {...status:"confirmed"...} }`
+
+### 18. PATCH `/api/admin/reservations/:id/cancel`
+body: `{ reason: string }` **(사유 필수)**. 대기/확정 예약 취소 → 주민에게 사유 포함 문자(스텁). 사유 없으면 `400`.
+
+### 19. GET `/api/admin/profiles`
+주민 목록 + `confirmed_count`(확정 누적 횟수).
+
+### 20. GET `/api/admin/stats?month=YYYY-MM`
+월 통계(생략 시 이번 달). `{ month, totals: {waiting,confirmed,cancelled,completed}, confirmed_persons, by_day: [{date,confirmed}] }`
+
+---
+
+> **SMS 실제 발송**은 **Phase 8**(CoolSMS 연결)에서, **PWA/아이콘**은 프론트 레포 담당입니다.
+> 현재 확정/취소 시 문자는 서버 로그로 대체(스텁)되어 있습니다.
