@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🐿️ 다람쥐 택시 — 백엔드 테스트 콘솔</title>
+<style>
+  :root { --p:#E8960A; --pl:#FEF3DC; --bg:#F4F2ED; --card:#fff; --green:#1E8A56; --red:#CC3030; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; margin:0; background:var(--bg); color:#111; }
+  header { background:var(--p); color:#fff; padding:14px 18px; font-weight:800; font-size:18px; position:sticky; top:0; z-index:5; }
+  .wrap { display:grid; grid-template-columns: 1fr 1fr; gap:14px; padding:16px; }
+  @media (max-width: 900px){ .wrap{ grid-template-columns:1fr; } }
+  .card { background:var(--card); border-radius:16px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  .card h2 { margin:0 0 10px; font-size:15px; }
+  button { background:var(--p); color:#fff; border:0; border-radius:10px; padding:9px 12px; font-weight:700; font-size:14px; cursor:pointer; margin:3px 3px 3px 0; }
+  button.alt { background:#555; }
+  button.green { background:var(--green); }
+  button.red { background:var(--red); }
+  input, select { padding:8px; border:1px solid #ccc; border-radius:8px; font-size:14px; margin:3px 0; }
+  label { font-size:13px; color:#555; display:inline-block; min-width:60px; }
+  #status { padding:8px 12px; background:var(--pl); border-radius:10px; font-size:13px; margin:8px 0; }
+  #out { background:#1e1e1e; color:#d4d4d4; padding:12px; border-radius:12px; font-size:12px; white-space:pre-wrap; word-break:break-all; max-height:60vh; overflow:auto; }
+  .row { margin:6px 0; }
+  .list .item { border:1px solid #eee; border-radius:10px; padding:8px 10px; margin:6px 0; font-size:13px; }
+  .muted { color:#888; font-size:12px; }
+  .tag { display:inline-block; padding:1px 7px; border-radius:8px; font-size:11px; font-weight:700; }
+  .tag.waiting{background:#eee;} .tag.confirmed{background:var(--green);color:#fff;} .tag.cancelled{background:var(--red);color:#fff;} .tag.completed{background:#999;color:#fff;}
+</style>
+</head>
+<body>
+<header>🐿️ 다람쥐 택시 — 백엔드 테스트 콘솔 <span class="muted" style="color:#fff;font-weight:400">(개발용)</span></header>
+<div id="status">로그인 안 됨 — 먼저 아래 [로그인]을 눌러주세요.</div>
+
+<div class="wrap">
+  <div class="card">
+    <h2>0. 로그인 (OTP·문자 없이)</h2>
+    <button onclick="devLogin('resident')">주민으로 로그인</button>
+    <button class="alt" onclick="devLogin('admin')">이장님으로 로그인</button>
+    <div class="muted">테스트 계정 토큰을 바로 발급합니다.</div>
+  </div>
+
+  <div class="card">
+    <h2>1. 마스터 데이터</h2>
+    <button onclick="call('/api/locations')">장소 목록</button>
+    <button onclick="call('/api/time-slots')">시간 목록</button>
+  </div>
+
+  <div class="card">
+    <h2>2. 예약 신청 (주민)</h2>
+    <div class="row"><label>날짜</label><input id="date" type="date" /></div>
+    <div class="row"><label>출발지역</label>
+      <select id="origin"><option value="cheongsanmyeon">청산면</option><option value="eupnae">읍내</option></select>
+      <button onclick="availability()">가용성 조회</button>
+    </div>
+    <hr/>
+    <div class="row"><label>시간</label><input id="hour" type="number" value="10" min="9" max="18" style="width:70px"/>
+      <label>인원</label><input id="persons" type="number" value="2" min="1" max="4" style="width:60px"/></div>
+    <div class="row"><label>출발지</label><select id="dep"></select></div>
+    <div class="row"><label>도착지</label><select id="arr"></select></div>
+    <button class="green" onclick="book()">예약하기</button>
+  </div>
+
+  <div class="card">
+    <h2>3. 내 예약 / 마을</h2>
+    <button onclick="myReservations()">내 예약 보기</button>
+    <button onclick="call('/api/runs/today')">오늘 운행</button>
+    <button onclick="call('/api/stats/village')">마을 현황</button>
+    <div id="mylist" class="list"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. 이장님 (관리자)</h2>
+    <button onclick="adminWaiting()">대기 예약 보기</button>
+    <button onclick="call('/api/admin/dashboard')">대시보드</button>
+    <button onclick="call('/api/admin/profiles')">주민 목록</button>
+    <button onclick="call('/api/admin/stats')">이번달 통계</button>
+    <div id="adminlist" class="list"></div>
+  </div>
+
+  <div class="card" style="grid-column:1/-1">
+    <h2>📋 결과</h2>
+    <div id="out">여기에 응답이 표시됩니다.</div>
+  </div>
+</div>
+
+<script>
+let TOKEN = null;
+const out = document.getElementById("out");
+const log = (label, data) => { out.textContent = label + "\n" + JSON.stringify(data, null, 2); };
+
+// 내일 날짜 기본값
+const t = new Date(Date.now() + 9*3600*1000 + 24*3600*1000);
+document.getElementById("date").value = `${t.getUTCFullYear()}-${String(t.getUTCMonth()+1).padStart(2,"0")}-${String(t.getUTCDate()).padStart(2,"0")}`;
+
+async function api(path, { method="GET", body } = {}) {
+  const headers = {};
+  if (TOKEN) headers.Authorization = "Bearer " + TOKEN;
+  if (body) headers["Content-Type"] = "application/json";
+  const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  let j = null; try { j = await res.json(); } catch {}
+  return { status: res.status, json: j };
+}
+async function call(path) { const r = await api(path); log(`GET ${path}  →  HTTP ${r.status}`, r.json); return r; }
+
+async function devLogin(role) {
+  const r = await api("/api/dev/login", { method:"POST", body:{ role } });
+  if (r.status === 200) {
+    TOKEN = r.json.access_token;
+    document.getElementById("status").textContent = `✅ 로그인됨: ${r.json.user.name} (${role}) — 토큰 발급 완료`;
+    log("개발용 로그인 성공", r.json.user);
+    loadLocations();
+  } else { log("로그인 실패 (ENABLE_DEV_LOGIN=true 확인)", r.json); }
+}
+
+async function loadLocations() {
+  const r = await api("/api/locations");
+  const opts = (r.json.locations||[]).map(l => `<option value="${l.id}">${l.emoji||""} ${l.name} (${l.category==="cheongsanmyeon"?"청산면":"읍내"})</option>`).join("");
+  document.getElementById("dep").innerHTML = opts;
+  document.getElementById("arr").innerHTML = opts;
+}
+
+async function availability() {
+  const date = document.getElementById("date").value;
+  const origin = document.getElementById("origin").value;
+  await call(`/api/availability?date=${date}&origin=${origin}`);
+}
+
+async function book() {
+  const body = {
+    date: document.getElementById("date").value,
+    hour: Number(document.getElementById("hour").value),
+    departure_id: Number(document.getElementById("dep").value),
+    arrival_id: Number(document.getElementById("arr").value),
+    persons: Number(document.getElementById("persons").value),
+  };
+  const r = await api("/api/reservations", { method:"POST", body });
+  log(`POST /api/reservations  →  HTTP ${r.status}`, r.json);
+  if (r.status === 201) myReservations();
+}
+
+async function myReservations() {
+  const r = await api("/api/reservations/me");
+  log(`GET /api/reservations/me  →  HTTP ${r.status}`, r.json);
+  const el = document.getElementById("mylist");
+  el.innerHTML = (r.json.reservations||[]).map(x =>
+    `<div class="item">${x.reservation_date} ${x.time_label} · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
+     <span class="tag ${x.status}">${x.status}</span>
+     <button class="red" onclick="cancelMine(${x.id})">취소</button></div>`).join("") || "<div class='muted'>예약 없음</div>";
+}
+async function cancelMine(id) {
+  const r = await api(`/api/reservations/${id}/cancel`, { method:"PATCH" });
+  log(`취소 ${id}  →  HTTP ${r.status}`, r.json);
+  myReservations();
+}
+
+async function adminWaiting() {
+  const r = await api("/api/admin/reservations?status=waiting");
+  log(`GET /api/admin/reservations?status=waiting  →  HTTP ${r.status}`, r.json);
+  const el = document.getElementById("adminlist");
+  el.innerHTML = (r.json.reservations||[]).map(x =>
+    `<div class="item">#${x.id} ${x.reservation_date} ${x.time_label} · ${x.resident?.name}(${x.resident?.phone}) · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
+     <button class="green" onclick="adminConfirm(${x.id})">확정</button>
+     <button class="red" onclick="adminCancel(${x.id})">취소</button></div>`).join("") || "<div class='muted'>대기 예약 없음</div>";
+}
+async function adminConfirm(id) {
+  const r = await api(`/api/admin/reservations/${id}/confirm`, { method:"PATCH" });
+  log(`확정 ${id}  →  HTTP ${r.status}`, r.json);
+  adminWaiting();
+}
+async function adminCancel(id) {
+  const reason = prompt("취소 사유를 입력하세요:", "차량 사정");
+  if (!reason) return;
+  const r = await api(`/api/admin/reservations/${id}/cancel`, { method:"PATCH", body:{ reason } });
+  log(`관리자 취소 ${id}  →  HTTP ${r.status}`, r.json);
+  adminWaiting();
+}
+</script>
+</body>
+</html>
