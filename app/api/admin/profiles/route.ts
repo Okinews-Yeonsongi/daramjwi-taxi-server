@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const { db } = guard;
 
   const [profRes, confRes] = await Promise.all([
-    db.from("profiles").select("id, phone, name, address, role, status, created_at").order("created_at", { ascending: true }),
+    db.from("profiles").select("id, phone, name, role, status, created_at").order("created_at", { ascending: true }),
     db.from("reservations").select("user_id").eq("status", "confirmed"),
   ]);
 

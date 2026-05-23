@@ -19,7 +19,6 @@ const ACCOUNTS = {
     name: "김주민",
     phone: "01010001000",
     role: "resident" as UserRole,
-    address: "청산면 데모리 1-1" as string | null,
   },
   admin: {
     email: "dev-admin@example.com",
@@ -27,7 +26,6 @@ const ACCOUNTS = {
     name: "이장님",
     phone: "01020002000",
     role: "admin" as UserRole,
-    address: null as string | null,
   },
 };
 
@@ -63,7 +61,6 @@ export async function POST(request: Request) {
     id: userId,
     phone: acc.phone,
     name: acc.name,
-    address: acc.address,
     role: acc.role,
   });
 

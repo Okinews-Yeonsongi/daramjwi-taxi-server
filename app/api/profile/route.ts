@@ -7,19 +7,19 @@ type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 /**
  * POST /api/profile   (헤더: Authorization: Bearer <access_token>)
- * body: { name: string, address?: string }
+ * body: { name: string }
  * → 온보딩(최초 프로필 생성). 전화번호는 인증된 정보에서 자동으로 채웁니다.
+ *   (집 주소는 받지 않습니다 — 픽업/드랍은 마을 거점만 가능)
  *   이미 프로필이 있으면 기존 것을 그대로 반환합니다(중복 제출 방어).
  */
 export async function POST(request: Request) {
   const auth = await getAuthUser(request);
   if (!auth) return apiError("로그인이 필요해요.", 401);
 
-  const body = await readJson<{ name?: string; address?: string }>(request);
+  const body = await readJson<{ name?: string }>(request);
   const name = body?.name?.trim();
   if (!name) return apiError("이름을 입력해 주세요.", 400);
   if (name.length > 50) return apiError("이름이 너무 길어요.", 400);
-  const address = body?.address?.trim() || null;
 
   // 이미 있으면 그대로 반환
   const { data: existing } = await auth.supabase
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await auth.supabase
     .from("profiles")
-    .insert({ id: auth.user.id, phone, name, address })
+    .insert({ id: auth.user.id, phone, name })
     .select()
     .single();
 
@@ -52,14 +52,14 @@ export async function POST(request: Request) {
 
 /**
  * PATCH /api/profile   (헤더: Authorization: Bearer <access_token>)
- * body: { name?: string, address?: string }
+ * body: { name?: string }
  * → 프로필 수정 (전화번호는 변경 불가 — 본인 인증 키이므로).
  */
 export async function PATCH(request: Request) {
   const auth = await getAuthUser(request);
   if (!auth) return apiError("로그인이 필요해요.", 401);
 
-  const body = await readJson<{ name?: string; address?: string }>(request);
+  const body = await readJson<{ name?: string }>(request);
   const patch: ProfileUpdate = {};
 
   if (body?.name !== undefined) {
@@ -68,7 +68,6 @@ export async function PATCH(request: Request) {
     if (name.length > 50) return apiError("이름이 너무 길어요.", 400);
     patch.name = name;
   }
-  if (body?.address !== undefined) patch.address = body.address?.trim() || null;
 
   if (Object.keys(patch).length === 0) {
     return apiError("수정할 내용이 없어요.", 400);

@@ -83,7 +83,7 @@
   "user": { "id": "uuid", "phone": "01012345678" },
   "profile": {
     "id": "uuid", "phone": "01012345678", "name": "홍길동",
-    "address": "청산면 ...", "role": "resident", "status": "active",
+    "role": "resident", "status": "active",
     "created_at": "...", "updated_at": "..."
   },
   "needsOnboarding": false
@@ -95,11 +95,12 @@
 
 ### 4. POST `/api/profile`  🔒
 온보딩(최초 프로필 생성). **전화번호는 인증된 값으로 자동 저장**되므로 보내지 않습니다.
+(집 주소는 받지 않습니다 — 픽업/드랍은 마을 거점만 가능)
 
 **헤더**: `Authorization: Bearer <access_token>`
 **요청**
 ```json
-{ "name": "홍길동", "address": "청산면 ○○리 1-2" }
+{ "name": "홍길동" }
 ```
 **응답 201**
 ```json
@@ -117,7 +118,7 @@
 **헤더**: `Authorization: Bearer <access_token>`
 **요청** (바꿀 항목만)
 ```json
-{ "name": "홍길동", "address": "새 주소" }
+{ "name": "홍길동" }
 ```
 **응답 200**
 ```json
@@ -135,11 +136,11 @@
 ```json
 {
   "locations": [
-    { "id": 1, "category": "cheongsanmyeon", "name": "우리집", "emoji": "🏠", "display_order": 1 },
+    { "id": 1, "category": "cheongsanmyeon", "name": "청산면사무소", "emoji": "🏢", "display_order": 1 },
     { "id": 4, "category": "eupnae", "name": "옥천성모병원", "emoji": "🏥", "display_order": 1 }
   ],
   "byCategory": {
-    "cheongsanmyeon": [ { "id": 1, "name": "우리집", ... }, ... ],
+    "cheongsanmyeon": [ { "id": 1, "name": "청산면사무소", ... }, ... ],
     "eupnae": [ { "id": 4, "name": "옥천성모병원", ... }, ... ]
   }
 }

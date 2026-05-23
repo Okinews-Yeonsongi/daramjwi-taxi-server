@@ -62,7 +62,7 @@ const book = (token, date, hour, dep, arr, persons) =>
 async function main() {
   console.log("1) 테스트 계정 준비");
   const userId = await getOrCreateUser();
-  await admin.from("profiles").upsert({ id: userId, phone: TEST_PHONE, name: "테스트주민", address: "청산면 테스트" });
+  await admin.from("profiles").upsert({ id: userId, phone: TEST_PHONE, name: "테스트주민" });
   await admin.from("reservations").delete().eq("user_id", userId); // 이전 테스트 데이터 정리
   const { data: si, error: siErr } = await anon.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
   if (siErr || !si.session) { console.error("로그인 실패:", siErr?.message); process.exit(1); }

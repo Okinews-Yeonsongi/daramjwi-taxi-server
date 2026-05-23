@@ -54,7 +54,7 @@ const myList = (token) => api(`/api/reservations/me`, { token });
 async function main() {
   console.log("1) 준비");
   const userId = await getOrCreateUser();
-  await admin.from("profiles").upsert({ id: userId, phone: TEST_PHONE, name: "테스트주민", address: "청산면 테스트" });
+  await admin.from("profiles").upsert({ id: userId, phone: TEST_PHONE, name: "테스트주민" });
   await admin.from("reservations").delete().eq("user_id", userId);
   const { data: si, error: siErr } = await anon.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
   if (siErr || !si.session) { console.error("로그인 실패:", siErr?.message); process.exit(1); }
@@ -73,7 +73,7 @@ async function main() {
   const rid = r.json.reservation.id;
   const item = (await myList(token)).json.reservations.find((x) => x.id === rid);
   check("me에 보임", !!item);
-  check("출발지=우리집", item?.departure?.name === "우리집", JSON.stringify(item?.departure));
+  check("출발지=청산면사무소", item?.departure?.name === "청산면사무소", JSON.stringify(item?.departure));
   check("도착지=옥천성모병원", item?.arrival?.name === "옥천성모병원");
   check("시간라벨=오전 10시", item?.time_label === "오전 10시", item?.time_label);
   check("차량코드 A/B", item?.vehicle_code === "A" || item?.vehicle_code === "B", item?.vehicle_code);

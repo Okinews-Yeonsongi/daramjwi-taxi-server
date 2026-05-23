@@ -48,7 +48,7 @@ async function main() {
   const adminId = await ensureUser(ADMIN_EMAIL, ADMIN_PW);
   const resId = await ensureUser(RES_EMAIL, RES_PW);
   await admin.from("profiles").upsert({ id: adminId, phone: "01088887777", name: "이장님", role: "admin" });
-  await admin.from("profiles").upsert({ id: resId, phone: "01099990000", name: "테스트주민", address: "청산면", role: "resident" });
+  await admin.from("profiles").upsert({ id: resId, phone: "01099990000", name: "테스트주민", role: "resident" });
   await admin.from("reservations").delete().eq("user_id", resId);
   const aTok = await token(ADMIN_EMAIL, ADMIN_PW);
   const rTok = await token(RES_EMAIL, RES_PW);

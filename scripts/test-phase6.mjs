@@ -36,7 +36,7 @@ async function api(path, token) {
 
 async function main() {
   const userId = await getOrCreateUser();
-  await admin.from("profiles").upsert({ id: userId, phone: "01099990000", name: "테스트주민", address: "청산면" });
+  await admin.from("profiles").upsert({ id: userId, phone: "01099990000", name: "테스트주민" });
   const { data: si } = await anon.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
   const token = si.session.access_token;
   const vA = (await admin.from("vehicles").select("id").eq("code", "A").single()).data.id;

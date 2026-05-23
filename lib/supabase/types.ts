@@ -31,7 +31,6 @@ export interface Database {
           id: string;
           phone: string;
           name: string;
-          address: string | null;
           role: UserRole;
           status: UserStatus;
           created_at: string;
@@ -41,7 +40,6 @@ export interface Database {
           id: string;
           phone: string;
           name: string;
-          address?: string | null;
           role?: UserRole;
           status?: UserStatus;
           created_at?: string;
@@ -51,7 +49,6 @@ export interface Database {
           id?: string;
           phone?: string;
           name?: string;
-          address?: string | null;
           role?: UserRole;
           status?: UserStatus;
           created_at?: string;
