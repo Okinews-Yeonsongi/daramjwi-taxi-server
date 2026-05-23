@@ -166,6 +166,21 @@
 
 ## 예약 신청 (주민용) 🔒
 
+### ⭐ 권장 화면 흐름 (중요)
+가용성(`/api/availability`)은 **날짜 + 출발지역(origin)** 이 있어야 계산되므로,
+**출발지를 시간보다 먼저** 고르는 흐름을 권장합니다:
+
+```
+1) 날짜 선택
+2) 출발지 선택 (청산면/읍내)         ← origin 확정
+3) 도착지 선택 (반대편 자동)          ← 가용성엔 영향 없음(카테고리 단위)
+4) 시간 선택  → GET /api/availability?date=&origin=  (마감 슬롯 회색 처리)
+5) 인원 선택  → GET /api/availability/seats?date=&hour=&origin=  (1~N 제한)
+6) 신청       → POST /api/reservations
+```
+- 도착지는 가용성에 영향을 주지 않으므로 4단계 뒤로 빼도 됩니다(자유).
+- 어떤 순서로 하든 **마지막 POST가 최종 검증**(마감 → `NO_VEHICLE` 등)을 하니 안전합니다.
+
 ### 8. GET `/api/availability?date=YYYY-MM-DD&origin=cheongsanmyeon`
 그 날짜+출발지의 시간대별 잔여석/마감 여부.
 
