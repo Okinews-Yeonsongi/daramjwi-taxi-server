@@ -80,17 +80,23 @@ async function main() {
   const can = await api(`/api/admin/reservations/${rid}/cancel`, { method: "PATCH", token: aTok, body: { reason: "차량 점검" } });
   check("취소 200 + status cancelled + 사유 저장", can.status === 200 && can.json?.reservation?.status === "cancelled" && can.json?.reservation?.cancel_reason === "차량 점검", JSON.stringify(can.json).slice(0, 150));
 
-  console.log("\n5) 확정 한도(일 4회) 검사");
-  const limDate = ymd(3);
+  console.log("\n5) 확정 한도는 '운행(차 출발) 수' 기준 — 합승은 1회로 카운트");
+  const limDate = ymd(4);
   await admin.from("reservations").delete().eq("user_id", resId).eq("reservation_date", limDate);
-  // 이미 확정 4건 채워둠
-  await admin.from("reservations").insert([9, 10, 11, 12].map((h) => ({
-    user_id: resId, reservation_date: limDate, hour: h, persons: 1, departure_location_id: 1, arrival_location_id: 4, vehicle_id: vA, status: "confirmed",
-  })));
-  // 같은 날 대기 1건 추가 → 확정 시도하면 한도 초과
-  const extra = (await admin.from("reservations").insert({ user_id: resId, reservation_date: limDate, hour: 13, persons: 1, departure_location_id: 1, arrival_location_id: 4, vehicle_id: vA, status: "waiting" }).select().single()).data;
-  const over = await api(`/api/admin/reservations/${extra.id}/confirm`, { method: "PATCH", token: aTok });
-  check("한도 초과 확정 → 409 DAILY_LIMIT", over.status === 409 && over.json?.code === "DAILY_LIMIT", JSON.stringify(over.json));
+  const mk = (h, st) => ({ user_id: resId, reservation_date: limDate, hour: h, persons: 1, departure_location_id: 1, arrival_location_id: 4, vehicle_id: vA, status: st });
+  // 운행 3회. 단, 9시는 합승 2명 → 확정은 4건이지만 운행은 3회
+  await admin.from("reservations").insert([mk(9, "confirmed"), mk(9, "confirmed"), mk(10, "confirmed"), mk(11, "confirmed")]);
+  const w12 = (await admin.from("reservations").insert(mk(12, "waiting")).select().single()).data;
+  const c12 = await api(`/api/admin/reservations/${w12.id}/confirm`, { method: "PATCH", token: aTok });
+  check("확정 4건이어도 운행은 3회 → 4번째 운행 확정 허용(200)", c12.status === 200, JSON.stringify(c12.json).slice(0, 150));
+  // 합승 합류: 9시 운행에 1명 더 → 한도(4운행) 도달했어도 '새 운행'이 아니라 허용
+  const w9 = (await admin.from("reservations").insert(mk(9, "waiting")).select().single()).data;
+  const c9 = await api(`/api/admin/reservations/${w9.id}/confirm`, { method: "PATCH", token: aTok });
+  check("합승 합류 확정은 한도와 무관하게 허용(200)", c9.status === 200, JSON.stringify(c9.json).slice(0, 150));
+  // 5번째 '새 운행' → 한도 초과
+  const w13 = (await admin.from("reservations").insert(mk(13, "waiting")).select().single()).data;
+  const c13 = await api(`/api/admin/reservations/${w13.id}/confirm`, { method: "PATCH", token: aTok });
+  check("5번째 운행 확정 → 409 DAILY_LIMIT", c13.status === 409 && c13.json?.code === "DAILY_LIMIT", JSON.stringify(c13.json));
 
   console.log("\n6) 주민 목록 + 확정 횟수");
   const profs = await api("/api/admin/profiles", { token: aTok });

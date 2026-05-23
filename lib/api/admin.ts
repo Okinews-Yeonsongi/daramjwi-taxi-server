@@ -50,6 +50,30 @@ export async function loadNotifyParties(
   };
 }
 
+/**
+ * 확정된 "운행 횟수"를 셉니다 (한도 4회/112회의 기준).
+ * 운행 1회 = (날짜, 시각, 차량) 한 묶음. 합승(같은 운행에 여러 명)은 1회로만 계산됩니다.
+ */
+export async function countConfirmedRuns(
+  db: SupabaseClient<Database>,
+  range: { date: string } | { start: string; nextStart: string }
+): Promise<number> {
+  let q = db
+    .from("reservations")
+    .select("reservation_date, hour, vehicle_id")
+    .eq("status", "confirmed");
+  if ("date" in range) {
+    q = q.eq("reservation_date", range.date);
+  } else {
+    q = q.gte("reservation_date", range.start).lt("reservation_date", range.nextStart);
+  }
+  const { data, error } = await q;
+  if (error) throw error;
+  const runs = new Set<string>();
+  for (const r of data ?? []) runs.add(`${r.reservation_date}|${r.hour}|${r.vehicle_id}`);
+  return runs.size;
+}
+
 /** 'YYYY-MM-DD' → 그 달의 [시작, 다음달 시작] 경계 */
 export function monthBounds(dateStr: string) {
   const [y, mo] = dateStr.split("-").map(Number);

@@ -1,4 +1,4 @@
-import { requireAdmin, loadNotifyParties, monthBounds } from "@/lib/api/admin";
+import { requireAdmin, loadNotifyParties, monthBounds, countConfirmedRuns } from "@/lib/api/admin";
 import { json, apiError } from "@/lib/api/http";
 import { DAILY_LIMIT, MONTHLY_LIMIT } from "@/lib/constants";
 import { notifyResidentConfirmed } from "@/lib/notify";
@@ -20,16 +20,30 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (!r) return apiError("예약을 찾을 수 없어요.", 404);
   if (r.status !== "waiting") return apiError("대기 중인 예약만 확정할 수 있어요.", 400);
 
-  // 한도 검사 (그 운행 날짜 기준, confirmed 기준)
+  // 한도 검사 — "운행 횟수" 기준(4회/112회). 합승(이미 확정된 같은 운행에 합류)은 한도 소모 안 함.
+  const vehicleId = r.vehicle_id;
+  if (vehicleId == null) return apiError("이 예약에 배정된 차량이 없어요. (관리자 문의)", 409);
+
   const { start, nextStart } = monthBounds(r.reservation_date);
-  const [dayC, monC] = await Promise.all([
-    db.from("reservations").select("*", { count: "exact", head: true }).eq("status", "confirmed").eq("reservation_date", r.reservation_date),
-    db.from("reservations").select("*", { count: "exact", head: true }).eq("status", "confirmed").gte("reservation_date", start).lt("reservation_date", nextStart),
-  ]);
-  if ((dayC.count ?? 0) >= DAILY_LIMIT)
-    return apiError(`${r.reservation_date}의 확정 한도(${DAILY_LIMIT}회)를 이미 채웠어요.`, 409, "DAILY_LIMIT");
-  if ((monC.count ?? 0) >= MONTHLY_LIMIT)
-    return apiError(`이번 달 확정 한도(${MONTHLY_LIMIT}회)를 이미 채웠어요.`, 409, "MONTHLY_LIMIT");
+  const { count: sameRunConfirmed } = await db
+    .from("reservations")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "confirmed")
+    .eq("reservation_date", r.reservation_date)
+    .eq("hour", r.hour)
+    .eq("vehicle_id", vehicleId);
+
+  // 이 확정이 "새 운행"을 만드는 경우에만 한도 검사
+  if ((sameRunConfirmed ?? 0) === 0) {
+    const [dayRuns, monRuns] = await Promise.all([
+      countConfirmedRuns(db, { date: r.reservation_date }),
+      countConfirmedRuns(db, { start, nextStart }),
+    ]);
+    if (dayRuns >= DAILY_LIMIT)
+      return apiError(`${r.reservation_date}의 운행 한도(${DAILY_LIMIT}회)를 이미 채웠어요.`, 409, "DAILY_LIMIT");
+    if (monRuns >= MONTHLY_LIMIT)
+      return apiError(`이번 달 운행 한도(${MONTHLY_LIMIT}회)를 이미 채웠어요.`, 409, "MONTHLY_LIMIT");
+  }
 
   const nowIso = new Date().toISOString();
   const { data: updated } = await db

@@ -283,7 +283,7 @@
 ```
 
 ### 14. GET `/api/stats/village`
-마을 현황 (모두 confirmed 기준).
+마을 현황. `daily.used`/`monthly.used`는 **확정된 "운행 횟수"**(차 출발 수)예요 — **합승은 1회**로 계산.
 
 **응답 200**
 ```json
@@ -307,7 +307,7 @@
 예약 필터 조회(둘 다 선택). 각 항목에 `resident:{name,phone}`, `departure/arrival`, `time_label`, `vehicle_code`, `cancel_reason` 포함.
 
 ### 17. PATCH `/api/admin/reservations/:id/confirm`
-대기 예약 확정. 일/월 한도(4/112) 초과 시 `409`(code `DAILY_LIMIT`/`MONTHLY_LIMIT`). 성공 시 주민에게 확정 문자(현재 스텁).
+대기 예약 확정. **운행 한도(일 4회 / 월 112회, 합승은 1회로 계산)** 초과 시 `409`(code `DAILY_LIMIT`/`MONTHLY_LIMIT`). 단, 이미 확정된 같은 운행에 **합승 합류**하는 확정은 한도를 소모하지 않습니다. 성공 시 주민에게 확정 문자(현재 스텁).
 응답: `{ reservation: {...status:"confirmed"...} }`
 
 ### 18. PATCH `/api/admin/reservations/:id/cancel`
@@ -317,7 +317,8 @@ body: `{ reason: string }` **(사유 필수)**. 대기/확정 예약 취소 → 
 주민 목록 + `confirmed_count`(확정 누적 횟수).
 
 ### 20. GET `/api/admin/stats?month=YYYY-MM`
-월 통계(생략 시 이번 달). `{ month, totals: {waiting,confirmed,cancelled,completed}, confirmed_persons, by_day: [{date,confirmed}] }`
+월 통계(생략 시 이번 달).
+`{ month, totals: {waiting,confirmed,cancelled,completed}(예약 건수), confirmed_persons, confirmed_runs(확정 운행 횟수, 합승 1회), by_day: [{date, runs}] }`
 
 ---
 

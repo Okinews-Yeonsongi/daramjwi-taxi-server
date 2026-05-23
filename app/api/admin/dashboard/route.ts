@@ -1,4 +1,4 @@
-import { requireAdmin, monthBounds } from "@/lib/api/admin";
+import { requireAdmin, monthBounds, countConfirmedRuns } from "@/lib/api/admin";
 import { json, apiError } from "@/lib/api/http";
 import { kstTodayString } from "@/lib/api/time";
 import { DAILY_LIMIT, MONTHLY_LIMIT, FARE_WON } from "@/lib/constants";
@@ -15,16 +15,13 @@ export async function GET(request: Request) {
   const today = kstTodayString();
   const { start, nextStart } = monthBounds(today);
 
-  const [todayRes, monthConf] = await Promise.all([
-    db.from("reservations").select("status, persons").eq("reservation_date", today),
-    db.from("reservations").select("*", { count: "exact", head: true }).eq("status", "confirmed").gte("reservation_date", start).lt("reservation_date", nextStart),
-  ]);
-
+  const todayRes = await db.from("reservations").select("status, persons").eq("reservation_date", today);
   if (todayRes.error) {
     console.error("[admin dashboard] 조회 실패:", todayRes.error.message);
     return apiError("대시보드를 불러오지 못했어요.", 500);
   }
 
+  // 오늘 상태별 "건수"(예약 수)
   const counts = { waiting: 0, confirmed: 0, cancelled: 0, completed: 0 };
   let confirmedPersons = 0;
   for (const r of todayRes.data ?? []) {
@@ -32,15 +29,26 @@ export async function GET(request: Request) {
     if (r.status === "confirmed") confirmedPersons += r.persons;
   }
 
-  const monthlyUsed = monthConf.count ?? 0;
+  // 한도는 "운행 횟수" 기준 (합승 1회)
+  let dailyRuns = 0;
+  let monthlyRuns = 0;
+  try {
+    [dailyRuns, monthlyRuns] = await Promise.all([
+      countConfirmedRuns(db, { date: today }),
+      countConfirmedRuns(db, { start, nextStart }),
+    ]);
+  } catch (e) {
+    console.error("[admin dashboard] 운행수 집계 실패:", (e as Error).message);
+    return apiError("대시보드를 불러오지 못했어요.", 500);
+  }
 
   return json({
     date: today,
     fare: FARE_WON,
-    today: { ...counts, confirmed_persons: confirmedPersons },
+    today: { ...counts, confirmed_persons: confirmedPersons }, // 예약 건수 기준
     limits: {
-      daily: { used: counts.confirmed, limit: DAILY_LIMIT, remaining: Math.max(0, DAILY_LIMIT - counts.confirmed) },
-      monthly: { used: monthlyUsed, limit: MONTHLY_LIMIT, remaining: Math.max(0, MONTHLY_LIMIT - monthlyUsed) },
+      daily: { used: dailyRuns, limit: DAILY_LIMIT, remaining: Math.max(0, DAILY_LIMIT - dailyRuns) },
+      monthly: { used: monthlyRuns, limit: MONTHLY_LIMIT, remaining: Math.max(0, MONTHLY_LIMIT - monthlyRuns) },
     },
   });
 }
