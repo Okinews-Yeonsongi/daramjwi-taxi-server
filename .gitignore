@@ -33,3 +33,6 @@ next-env.d.ts
 # supabase CLI 로컬 산출물
 /supabase/.temp
 /supabase/.branches
+
+# Claude Code 로컬(개인) 설정 — 공유 안 함
+.claude/settings.local.json
