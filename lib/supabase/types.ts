@@ -98,7 +98,9 @@ export interface Database {
       reservations: {
         Row: {
           id: number;
-          user_id: string;
+          user_id: string | null;
+          guest_name: string | null;
+          guest_phone: string | null;
           reservation_date: string;
           hour: number;
           persons: number;
@@ -116,7 +118,9 @@ export interface Database {
         };
         Insert: {
           id?: number;
-          user_id: string;
+          user_id?: string | null;
+          guest_name?: string | null;
+          guest_phone?: string | null;
           reservation_date: string;
           hour: number;
           persons: number;
@@ -134,7 +138,9 @@ export interface Database {
         };
         Update: {
           id?: number;
-          user_id?: string;
+          user_id?: string | null;
+          guest_name?: string | null;
+          guest_phone?: string | null;
           reservation_date?: string;
           hour?: number;
           persons?: number;
@@ -180,6 +186,18 @@ export interface Database {
       create_reservation_atomic: {
         Args: {
           p_user_id: string;
+          p_date: string;
+          p_hour: number;
+          p_departure_id: number;
+          p_arrival_id: number;
+          p_persons: number;
+        };
+        Returns: Database["public"]["Tables"]["reservations"]["Row"];
+      };
+      create_guest_reservation_atomic: {
+        Args: {
+          p_guest_name: string;
+          p_guest_phone: string;
           p_date: string;
           p_hour: number;
           p_departure_id: number;

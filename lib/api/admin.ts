@@ -30,24 +30,66 @@ export async function requireAdmin(
   return { auth, db: createAdminClient() };
 }
 
-/** 알림 문구에 쓸 주민 이름/전화 + 출발·도착 장소명 조회 */
+/** 알림 문구에 쓸 주민 이름/전화 + 출발·도착 장소명 조회 (회원/전화예약 모두 지원) */
 export async function loadNotifyParties(
   db: SupabaseClient<Database>,
   r: ReservationRow
 ) {
-  const [{ data: prof }, { data: locs }] = await Promise.all([
-    db.from("profiles").select("name, phone").eq("id", r.user_id).maybeSingle(),
-    db.from("locations").select("id, name").in("id", [r.departure_location_id, r.arrival_location_id]),
-  ]);
+  const { data: locs } = await db
+    .from("locations")
+    .select("id, name")
+    .in("id", [r.departure_location_id, r.arrival_location_id]);
   const nameOf = (lid: number) => locs?.find((l) => l.id === lid)?.name ?? "";
+
+  // 전화예약(비회원)은 guest 정보, 회원은 프로필 정보 사용
+  let residentName = r.guest_name ?? "주민";
+  let residentPhone = r.guest_phone ?? "";
+  if (r.user_id) {
+    const { data: prof } = await db
+      .from("profiles")
+      .select("name, phone")
+      .eq("id", r.user_id)
+      .maybeSingle();
+    residentName = prof?.name ?? residentName;
+    residentPhone = prof?.phone ?? residentPhone;
+  }
+
   return {
-    residentName: prof?.name ?? "주민",
-    residentPhone: prof?.phone ?? "",
+    residentName,
+    residentPhone,
     departureName: nameOf(r.departure_location_id),
     arrivalName: nameOf(r.arrival_location_id),
     date: r.reservation_date,
     hour: r.hour,
   };
+}
+
+/** 사람 식별 키 (회원=user_id, 전화예약=guest_phone) */
+export function personKey(r: { user_id: string | null; guest_phone: string | null }): string {
+  return r.user_id ? `u:${r.user_id}` : r.guest_phone ? `g:${r.guest_phone}` : "";
+}
+
+/**
+ * 이번 달 "사람별 확정 탑승 횟수" 맵 (item6: 이름 옆 월별 횟수).
+ * 회원/전화예약 모두 사람 단위로 집계. (확정된 것만)
+ */
+export async function monthlyConfirmedCountByPerson(
+  db: SupabaseClient<Database>,
+  anyDateInMonth: string
+): Promise<Map<string, number>> {
+  const { start, nextStart } = monthBounds(anyDateInMonth);
+  const { data } = await db
+    .from("reservations")
+    .select("user_id, guest_phone")
+    .eq("status", "confirmed")
+    .gte("reservation_date", start)
+    .lt("reservation_date", nextStart);
+  const map = new Map<string, number>();
+  for (const r of data ?? []) {
+    const key = personKey(r);
+    if (key) map.set(key, (map.get(key) ?? 0) + 1);
+  }
+  return map;
 }
 
 /**

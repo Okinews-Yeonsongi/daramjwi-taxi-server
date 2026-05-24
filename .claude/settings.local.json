@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(try { \\(Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction Stop\\).OwningProcess | Select-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; \"기존 서버 종료\" } catch { \"기존 서버 없음\" })"
+    ]
+  }
+}

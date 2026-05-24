@@ -305,7 +305,20 @@
 오늘 요약. `{ date, fare, today: { waiting, confirmed, cancelled, completed, confirmed_persons }, limits: { daily, monthly } }`
 
 ### 16. GET `/api/admin/reservations?status=waiting&date=YYYY-MM-DD`
-예약 필터 조회(둘 다 선택). 각 항목에 `resident:{name,phone}`, `departure/arrival`, `time_label`, `vehicle_code`, `cancel_reason` 포함.
+예약 필터 조회(둘 다 선택). 각 항목에 포함:
+- `resident: { id, name, phone, is_guest }` — 회원이면 프로필, **전화예약이면 `is_guest:true` + 입력한 이름/전화**
+- `monthly_confirmed` — 그 사람의 **이번 달 확정 탑승 횟수**(회원=계정, 전화예약=전화번호로 집계) ← item6
+- `departure`/`arrival`, `time_label`, `vehicle_code`, `cancel_reason`, `confirmed_at`, `cancelled_at`
+
+### 16-b. POST `/api/admin/reservations`  (전화예약, 이장님 대신 신청)
+이장님이 전화로 받은 신청을 **이름+연락처**로 대신 입력. 주민 정보는 **저장하지 않음**(매번 입력). 차량 자동배정·마감 규칙은 주민 신청과 동일.
+
+**요청**
+```json
+{ "name": "김순례", "phone": "010-1234-5678", "date": "2026-05-23", "hour": 10, "departure_id": 1, "arrival_id": 4, "persons": 2 }
+```
+**응답 201**: `{ "reservation": { "id": .., "guest_name": "김순례", "guest_phone": "01012345678", "user_id": null, "status": "waiting", ... } }`
+**에러**: `400`(입력 오류) / `409 NO_VEHICLE`(마감) / `403`(관리자 아님)
 
 ### 17. PATCH `/api/admin/reservations/:id/confirm`
 대기 예약 확정. **운행 한도(일 4회 / 월 112회, 합승은 1회로 계산)** 초과 시 `409`(code `DAILY_LIMIT`/`MONTHLY_LIMIT`). 단, 이미 확정된 같은 운행에 **합승 합류**하는 확정은 한도를 소모하지 않습니다. 성공 시 주민에게 확정 문자(현재 스텁).

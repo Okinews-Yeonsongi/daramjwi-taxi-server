@@ -22,6 +22,7 @@ export async function GET(request: Request) {
 
   const countByUser = new Map<string, number>();
   for (const row of confRes.data ?? []) {
+    if (!row.user_id) continue; // 전화예약(비회원)은 프로필이 없으므로 제외
     countByUser.set(row.user_id, (countByUser.get(row.user_id) ?? 0) + 1);
   }
 
