@@ -374,6 +374,8 @@ supabase
 
 ### 16. GET `/api/admin/reservations?status=waiting&date=YYYY-MM-DD`
 예약 필터 조회(둘 다 선택). 각 항목에 포함:
+- `status` — 원본 상태 (waiting / confirmed / cancelled)
+- **`effective_status`** — 화면 표시용 (지난 슬롯이면 자동 **`completed`**, 취소는 그대로, 미래는 원본 상태) ← item4
 - `resident: { id, name, phone, is_guest }` — 회원이면 프로필, **전화예약이면 `is_guest:true` + 입력한 이름/전화**
 - `monthly_confirmed` — 그 사람의 **이번 달 확정 탑승 횟수**(회원=계정, 전화예약=전화번호로 집계) ← item6
 - `departure`/`arrival`, `time_label`, `vehicle_code`, `cancel_reason`, `confirmed_at`, `cancelled_at`

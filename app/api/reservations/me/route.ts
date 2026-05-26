@@ -1,6 +1,13 @@
 import { getAuthUser } from "@/lib/supabase/user";
 import { json, apiError } from "@/lib/api/http";
-import { kstTodayString } from "@/lib/api/time";
+import { kstTodayString, isSlotInFuture } from "@/lib/api/time";
+import type { ReservationStatus } from "@/lib/supabase/types";
+
+function effectiveStatus(status: ReservationStatus, date: string, hour: number): ReservationStatus | "completed" {
+  if (status === "cancelled") return "cancelled";
+  if (!isSlotInFuture(date, hour)) return "completed";
+  return status;
+}
 
 /**
  * GET /api/reservations/me   🔒
@@ -41,6 +48,7 @@ export async function GET(request: Request) {
     time_label: slotMap.get(r.hour) ?? null,
     persons: r.persons,
     status: r.status,
+    effective_status: effectiveStatus(r.status, r.reservation_date, r.hour),
     departure: locMap.get(r.departure_location_id) ?? null,
     arrival: locMap.get(r.arrival_location_id) ?? null,
     vehicle_code: r.vehicle_id != null ? (vehMap.get(r.vehicle_id) ?? null) : null,

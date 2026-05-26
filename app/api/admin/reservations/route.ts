@@ -8,6 +8,13 @@ import { normalizeKoreanMobile } from "@/lib/api/phone";
 import { isValidDateString, isWithinBookingWindow, isSlotInFuture, kstTodayString } from "@/lib/api/time";
 import type { ReservationStatus } from "@/lib/supabase/types";
 
+/** 화면 표시용 상태(완료 자동 분류 포함) */
+function effectiveStatus(status: ReservationStatus, date: string, hour: number): ReservationStatus | "completed" {
+  if (status === "cancelled") return "cancelled";
+  if (!isSlotInFuture(date, hour)) return "completed"; // 지난 슬롯 → 완료
+  return status; // 미래는 원래 상태(waiting/confirmed)
+}
+
 const STATUSES: ReservationStatus[] = ["waiting", "confirmed", "cancelled", "completed"];
 
 const BOOK_ERRORS: Record<string, { msg: string; status: number }> = {
@@ -79,6 +86,7 @@ export async function GET(request: Request) {
       time_label: slotMap.get(r.hour) ?? null,
       persons: r.persons,
       status: r.status,
+      effective_status: effectiveStatus(r.status, r.reservation_date, r.hour), // 지난 슬롯은 자동 '완료'
       resident,
       monthly_confirmed: monthlyMap.get(personKey(r)) ?? 0, // 이번 달 확정 탑승 횟수
       departure: locMap.get(r.departure_location_id) ?? null,
