@@ -29,6 +29,14 @@ export async function notifyResidentCancelled(info: Party & { reason: string }):
   );
 }
 
+/** 주민이 본인 예약(대기/확정)을 취소 → 주민 본인에게 확인 알림 */
+export async function notifyResidentSelfCancelled(info: Party): Promise<void> {
+  console.log(
+    `[SMS-STUB→${info.residentPhone}] ${info.residentName}님, ${info.date} ${info.hour}시 ` +
+      `탑승 예약 취소가 처리되었어요. (${info.departureName}→${info.arrivalName})`
+  );
+}
+
 /** 주민이 '확정된' 예약을 본인 취소 → 이장님에게 */
 export async function notifyAdminSelfCancel(info: {
   residentName: string;

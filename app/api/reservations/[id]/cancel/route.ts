@@ -1,13 +1,13 @@
 import { getAuthUser } from "@/lib/supabase/user";
 import { json, apiError } from "@/lib/api/http";
 import { isSlotInFuture } from "@/lib/api/time";
-import { notifyAdminSelfCancel } from "@/lib/notify";
+import { notifyAdminSelfCancel, notifyResidentSelfCancelled } from "@/lib/notify";
 
 /**
  * PATCH /api/reservations/:id/cancel   🔒
  * 본인 예약 취소. 운행 시작 시각 이후엔 취소 불가.
  * - 카운트(한도/확정횟수)는 status로 계산하므로 자동 복구됨.
- * - confirmed 예약을 본인이 취소하면 이장님께 알림(현재는 로그 스텁).
+ * - 알림: 항상 본인에게 취소 확인 + 확정 예약이었으면 이장님께도 알림. (현재는 로그 스텁)
  */
 export async function PATCH(
   request: Request,
@@ -61,28 +61,34 @@ export async function PATCH(
     return apiError("예약 상태가 방금 변경됐어요. 새로고침 후 다시 시도해 주세요.", 409);
   }
 
-  // 확정 예약을 본인이 취소 → 이장님 알림 (실패해도 취소는 유효)
-  if (existing.status === "confirmed") {
-    try {
-      const [{ data: prof }, { data: locs }] = await Promise.all([
-        auth.supabase.from("profiles").select("name").eq("id", auth.user.id).maybeSingle(),
-        auth.supabase
-          .from("locations")
-          .select("id, name")
-          .in("id", [existing.departure_location_id, existing.arrival_location_id]),
-      ]);
-      const nameOf = (lid: number) => locs?.find((l) => l.id === lid)?.name ?? "";
-      await notifyAdminSelfCancel({
-        residentName: prof?.name ?? "주민",
-        date: existing.reservation_date,
-        hour: existing.hour,
-        departureName: nameOf(existing.departure_location_id),
-        arrivalName: nameOf(existing.arrival_location_id),
-        persons: existing.persons,
-      });
-    } catch (e) {
-      console.error("[cancel] 알림 스텁 실패(무시):", (e as Error).message);
+  // 알림: 항상 본인에게 취소 확인 + 확정이었으면 이장님에게도. (실패해도 취소는 유효)
+  try {
+    const [{ data: prof }, { data: locs }] = await Promise.all([
+      auth.supabase.from("profiles").select("name, phone").eq("id", auth.user.id).maybeSingle(),
+      auth.supabase
+        .from("locations")
+        .select("id, name")
+        .in("id", [existing.departure_location_id, existing.arrival_location_id]),
+    ]);
+    const nameOf = (lid: number) => locs?.find((l) => l.id === lid)?.name ?? "";
+    const party = {
+      residentName: prof?.name ?? "주민",
+      residentPhone: prof?.phone ?? "",
+      date: existing.reservation_date,
+      hour: existing.hour,
+      departureName: nameOf(existing.departure_location_id),
+      arrivalName: nameOf(existing.arrival_location_id),
+    };
+
+    // case 3: 항상 본인에게 취소 확인
+    await notifyResidentSelfCancelled(party);
+
+    // case 4: 확정 예약 본인 취소면 이장님에게도
+    if (existing.status === "confirmed") {
+      await notifyAdminSelfCancel({ ...party, persons: existing.persons });
     }
+  } catch (e) {
+    console.error("[cancel] 알림 스텁 실패(무시):", (e as Error).message);
   }
 
   return json({ reservation: updated });
