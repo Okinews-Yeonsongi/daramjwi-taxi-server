@@ -394,6 +394,31 @@ supabase
 대기 예약 확정. **운행 한도(일 4회 / 월 112회, 합승은 1회로 계산)** 초과 시 `409`(code `DAILY_LIMIT`/`MONTHLY_LIMIT`). 단, 이미 확정된 같은 운행에 **합승 합류**하는 확정은 한도를 소모하지 않습니다. 성공 시 주민에게 확정 문자(현재 스텁).
 응답: `{ reservation: {...status:"confirmed"...} }`
 
+### 17-b. POST `/api/admin/reservations/merge`  (수동 조율: 합치기)
+선택된 대기 예약 N건을 **같은 차 + 같은 새 시각(10분 단위)** 으로 묶어 자동 확정 + 각 주민에게 확정 알림.
+
+**조건**: 모두 `waiting` / 같은 날짜 / 같은 출발 지역 / 시간차 ≤ 1시간 / 인원합 ≤ 4.
+
+**요청**
+```json
+{ "reservation_ids": [12, 15], "new_hour": 10, "new_minute": 40 }
+```
+- `new_minute`: `0 / 10 / 20 / 30 / 40 / 50` 중 하나 (10분 단위)
+
+**응답 200**: `{ "reservations": [ {...status:"confirmed", hour:10, departure_minute:40, vehicle_id:1...}, ... ] }`
+
+**에러 코드**
+| code | 의미 |
+|---|---|
+| `MERGE_NEED_TWO` | 두 건 미만 선택 |
+| `MERGE_NOT_ALL_WAITING` | 대기 아닌 예약 포함 |
+| `MERGE_DATE_MISMATCH` | 날짜 다름 |
+| `MERGE_CATEGORY_MISMATCH` | 출발 지역 다름 |
+| `MERGE_HOUR_RANGE` | 시간차 1시간 초과 |
+| `MERGE_OVER_CAPACITY` | 합치면 4명 초과 |
+| `NO_VEHICLE` | 새 시각에 빈 차 없음 |
+| `DAILY_LIMIT` / `MONTHLY_LIMIT` | 한도 초과 |
+
 ### 18. PATCH `/api/admin/reservations/:id/cancel`
 body: `{ reason: string }` **(사유 필수)**. 대기/확정 예약 취소 → 주민에게 사유 포함 문자(스텁). 사유 없으면 `400`.
 

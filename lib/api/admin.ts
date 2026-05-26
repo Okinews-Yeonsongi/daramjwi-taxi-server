@@ -61,6 +61,7 @@ export async function loadNotifyParties(
     arrivalName: nameOf(r.arrival_location_id),
     date: r.reservation_date,
     hour: r.hour,
+    minute: r.departure_minute, // 합치기로 분 조정된 경우 반영
   };
 }
 

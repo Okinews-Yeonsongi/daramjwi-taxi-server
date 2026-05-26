@@ -79,11 +79,14 @@ export async function GET(request: Request) {
       phone: p?.phone ?? r.guest_phone ?? null,
       is_guest: r.user_id == null,
     };
+    const baseLabel = slotMap.get(r.hour) ?? null;
+    const timeLabel = r.departure_minute > 0 && baseLabel ? `${baseLabel} ${r.departure_minute}분` : baseLabel;
     return {
       id: r.id,
       reservation_date: r.reservation_date,
       hour: r.hour,
-      time_label: slotMap.get(r.hour) ?? null,
+      departure_minute: r.departure_minute,
+      time_label: timeLabel,
       persons: r.persons,
       status: r.status,
       effective_status: effectiveStatus(r.status, r.reservation_date, r.hour), // 지난 슬롯은 자동 '완료'

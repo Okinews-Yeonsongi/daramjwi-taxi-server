@@ -41,11 +41,15 @@ export async function GET(request: Request) {
   const slotMap = new Map((slotRes.data ?? []).map((s) => [s.hour, s.label]));
   const vehMap = new Map((vehRes.data ?? []).map((v) => [v.id, v.code]));
 
-  const reservations = (resvRes.data ?? []).map((r) => ({
+  const reservations = (resvRes.data ?? []).map((r) => {
+    const baseLabel = slotMap.get(r.hour) ?? null;
+    const timeLabel = r.departure_minute > 0 && baseLabel ? `${baseLabel} ${r.departure_minute}분` : baseLabel;
+    return {
     id: r.id,
     reservation_date: r.reservation_date,
     hour: r.hour,
-    time_label: slotMap.get(r.hour) ?? null,
+    departure_minute: r.departure_minute,
+    time_label: timeLabel,
     persons: r.persons,
     status: r.status,
     effective_status: effectiveStatus(r.status, r.reservation_date, r.hour),
@@ -56,7 +60,8 @@ export async function GET(request: Request) {
     cancelled_at: r.cancelled_at,
     cancel_reason: r.cancel_reason,
     created_at: r.created_at,
-  }));
+    };
+  });
 
   return json({ reservations });
 }

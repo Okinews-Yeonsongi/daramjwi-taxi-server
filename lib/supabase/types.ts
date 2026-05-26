@@ -103,6 +103,7 @@ export interface Database {
           guest_phone: string | null;
           reservation_date: string;
           hour: number;
+          departure_minute: number;
           persons: number;
           departure_location_id: number;
           arrival_location_id: number;
@@ -123,6 +124,7 @@ export interface Database {
           guest_phone?: string | null;
           reservation_date: string;
           hour: number;
+          departure_minute?: number;
           persons: number;
           departure_location_id: number;
           arrival_location_id: number;
@@ -142,6 +144,7 @@ export interface Database {
           guest_name?: string | null;
           guest_phone?: string | null;
           reservation_date?: string;
+          departure_minute?: number;
           hour?: number;
           persons?: number;
           departure_location_id?: number;
@@ -205,6 +208,15 @@ export interface Database {
           p_persons: number;
         };
         Returns: Database["public"]["Tables"]["reservations"]["Row"];
+      };
+      merge_reservations_admin: {
+        Args: {
+          p_reservation_ids: number[];
+          p_new_hour: number;
+          p_new_minute: number;
+          p_confirmed_by: string;
+        };
+        Returns: Database["public"]["Tables"]["reservations"]["Row"][];
       };
     };
     Enums: { [_ in never]: never };
