@@ -281,6 +281,37 @@
 
 ---
 
+## 📡 실시간 동기화 (Realtime, 이장님 앱용)
+
+주민이 예약을 **신청·취소**하면 이장님 앱에 **즉시 자동 반영**됩니다. 별도 API 호출/폴링 불필요.
+프론트엔드는 supabase-js 의 Realtime 채널을 한 번만 구독하세요:
+
+```ts
+import { createClient } from "@supabase/supabase-js";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+await supabase.auth.setSession({ access_token, refresh_token }); // 이장님 토큰
+
+supabase
+  .channel("reservations-changes")
+  .on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "reservations" },
+    (payload) => {
+      // payload.eventType: "INSERT" | "UPDATE" | "DELETE"
+      // payload.new : 변경 후 row (대기 카테고리 등으로 분류해서 화면 갱신)
+      // payload.old : 변경 전 row (UPDATE/DELETE 시)
+    }
+  )
+  .subscribe();
+```
+
+- **RLS가 그대로 적용**되므로: 이장님(role=admin)은 **마을 전체** 변경을, 주민은 **본인 것만** 수신합니다.
+- `payload.new.status === 'waiting'` 인 INSERT가 도착 → 이장님 앱 "대기 카테고리"에 추가
+- `status: 'cancelled'` 로 UPDATE 도착 → 목록에서 빼거나 취소 표시
+- 토큰이 만료되거나 로그아웃 시 `supabase.removeChannel(channel)` 로 해제 권장
+
+---
+
 ## 운행·통계 (주민용) 🔒
 
 ### 13. GET `/api/runs/today`
