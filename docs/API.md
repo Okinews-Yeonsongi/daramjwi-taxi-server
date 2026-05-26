@@ -281,10 +281,14 @@
 
 ---
 
-## 📡 실시간 동기화 (Realtime, 이장님 앱용)
+## 📡 실시간 동기화 (Realtime, 주민용·이장님용 둘 다)
 
-주민이 예약을 **신청·취소**하면 이장님 앱에 **즉시 자동 반영**됩니다. 별도 API 호출/폴링 불필요.
-프론트엔드는 supabase-js 의 Realtime 채널을 한 번만 구독하세요:
+**양방향 자동** — RLS 덕분에:
+- 주민 신청/취소 → 이장님 앱에 즉시 푸시
+- 이장님 확정/취소 → **해당 주민** 앱에 즉시 푸시
+- 운행횟수·잔여횟수 같은 "계산값"은 변경 이벤트가 오면 프론트가 해당 GET 엔드포인트(`/api/stats/village`, `/api/runs/today`, `/api/availability`)를 다시 호출해서 갱신
+
+별도 API 호출/폴링 없이, supabase-js Realtime 채널을 한 번만 구독하면 됩니다:
 
 ```ts
 import { createClient } from "@supabase/supabase-js";
@@ -296,18 +300,28 @@ supabase
   .on(
     "postgres_changes",
     { event: "*", schema: "public", table: "reservations" },
-    (payload) => {
+    async (payload) => {
       // payload.eventType: "INSERT" | "UPDATE" | "DELETE"
-      // payload.new : 변경 후 row (대기 카테고리 등으로 분류해서 화면 갱신)
-      // payload.old : 변경 전 row (UPDATE/DELETE 시)
+      // payload.new : 변경 후 row,  payload.old : 변경 전 row
+
+      // 1) 목록 화면 갱신 (대기/확정/취소 등으로 분류)
+      //    INSERT status=waiting → 이장님 "대기" 섹션에 추가
+      //    UPDATE status=confirmed → 주민/이장님 모두 "확정"으로 이동
+      //    UPDATE status=cancelled → 목록에서 빼거나 취소 표시
+
+      // 2) 계산값(운행수/잔여횟수/마을현황) 즉시 갱신
+      //    아래 GET 들을 다시 호출해서 화면 숫자를 새로 그리면 됨
+      //    await fetch("/api/stats/village")
+      //    await fetch("/api/runs/today")
+      //    await fetch(`/api/availability?date=&origin=`)   // 신청 화면에 있을 때
     }
   )
   .subscribe();
 ```
 
-- **RLS가 그대로 적용**되므로: 이장님(role=admin)은 **마을 전체** 변경을, 주민은 **본인 것만** 수신합니다.
-- `payload.new.status === 'waiting'` 인 INSERT가 도착 → 이장님 앱 "대기 카테고리"에 추가
-- `status: 'cancelled'` 로 UPDATE 도착 → 목록에서 빼거나 취소 표시
+- **RLS가 그대로 적용**됩니다:
+  - 이장님(role=admin)은 마을 전체 변경 수신 → 주민 신청·취소가 실시간으로 보임
+  - 주민은 본인 예약 변경만 수신 → 이장님 확정·취소가 본인 화면에 실시간으로 반영
 - 토큰이 만료되거나 로그아웃 시 `supabase.removeChannel(channel)` 로 해제 권장
 
 ---
