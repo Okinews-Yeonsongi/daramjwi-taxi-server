@@ -285,16 +285,25 @@
 
 ### 14. GET `/api/stats/village`
 마을 현황. `daily.used`/`monthly.used`는 **확정된 "운행 횟수"**(차 출발 수)예요 — **합승은 1회**로 계산.
+`monthly.passengers`/`avg_passengers_per_run`는 **탑승 인원 합**과 **평균 탑승자/운행** (합승 포함, 인원 단위).
 
 **응답 200**
 ```json
 {
   "date": "2026-05-22",
   "fare": 1700,
-  "daily":   { "used": 1, "limit": 4,   "remaining": 3 },
-  "monthly": { "used": 30, "limit": 112, "remaining": 82 }
+  "daily":   { "used": 2, "limit": 4,   "remaining": 2 },
+  "monthly": {
+    "used": 22, "limit": 112, "remaining": 90,
+    "passengers": 47,
+    "avg_passengers_per_run": 2.1
+  }
 }
 ```
+- "이번 달 잔여 90회" → `monthly.remaining`
+- "이번 달 탑승자 47명" → `monthly.passengers`
+- "오늘 운행 2회" → `daily.used`
+- "평균 탑승자 2.1명" → `monthly.avg_passengers_per_run`
 
 ---
 

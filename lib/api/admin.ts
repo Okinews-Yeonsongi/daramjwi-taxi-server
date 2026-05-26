@@ -93,6 +93,35 @@ export async function monthlyConfirmedCountByPerson(
 }
 
 /**
+ * 확정 통계 — "운행 횟수"와 "총 탑승 인원" 동시 계산.
+ *   runs       = (날짜,시각,차량) 단위 거리(합승 1회로 카운트)
+ *   passengers = 확정 예약 persons 합 (합승 포함, 사람×운행 단위)
+ */
+export async function confirmedStats(
+  db: SupabaseClient<Database>,
+  range: { date: string } | { start: string; nextStart: string }
+): Promise<{ runs: number; passengers: number }> {
+  let q = db
+    .from("reservations")
+    .select("reservation_date, hour, vehicle_id, persons")
+    .eq("status", "confirmed");
+  if ("date" in range) {
+    q = q.eq("reservation_date", range.date);
+  } else {
+    q = q.gte("reservation_date", range.start).lt("reservation_date", range.nextStart);
+  }
+  const { data, error } = await q;
+  if (error) throw error;
+  const runs = new Set<string>();
+  let passengers = 0;
+  for (const r of data ?? []) {
+    runs.add(`${r.reservation_date}|${r.hour}|${r.vehicle_id}`);
+    passengers += r.persons;
+  }
+  return { runs: runs.size, passengers };
+}
+
+/**
  * 확정된 "운행 횟수"를 셉니다 (한도 4회/112회의 기준).
  * 운행 1회 = (날짜, 시각, 차량) 한 묶음. 합승(같은 운행에 여러 명)은 1회로만 계산됩니다.
  */

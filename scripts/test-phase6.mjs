@@ -92,6 +92,10 @@ async function main() {
   check("이번달 확정 +5 (monthly.used 증가)", after.monthly.used - base.monthly.used === 5, `base=${base.monthly.used} after=${after.monthly.used}`);
   check("daily.remaining = 4 - used", after.daily.remaining === Math.max(0, 4 - after.daily.used));
   check("monthly.remaining = 112 - used", after.monthly.remaining === Math.max(0, 112 - after.monthly.used));
+  // 신규 필드: passengers (이번 달 확정 인원 합) + avg_passengers_per_run
+  check("monthly.passengers 필드 존재(숫자)", typeof after.monthly.passengers === "number");
+  check("monthly.passengers +5 (확정 인원 합산)", (after.monthly.passengers - base.monthly.passengers) === 5, `base=${base.monthly.passengers} after=${after.monthly.passengers}`);
+  check("avg_passengers_per_run 필드 존재(숫자)", typeof after.monthly.avg_passengers_per_run === "number");
 
   console.log(`\n===== 결과: ${pass} 통과 / ${fail} 실패 =====`);
   await admin.from("reservations").delete().eq("user_id", userId);
