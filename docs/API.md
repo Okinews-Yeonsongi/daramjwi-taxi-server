@@ -15,15 +15,31 @@
 
 ---
 
-## 인증 흐름 (OTP = 문자 인증)
+## 인증 흐름
 
+### ⭐ 주 로그인 = 카카오 로그인 (OAuth)
+프론트엔드는 supabase-js로 직접 카카오 로그인을 띄웁니다 (백엔드 호출 불필요):
+```ts
+import { createClient } from "@supabase/supabase-js";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// 로그인 버튼
+await supabase.auth.signInWithOAuth({
+  provider: "kakao",
+  options: { redirectTo: "<로그인 후 돌아올 우리 앱 주소>" },
+});
+// → 카카오 동의 → 우리 앱으로 복귀, supabase 세션 자동 생성
+
+// 복귀 후
+const { data: { session } } = await supabase.auth.getSession();
+const token = session.access_token;       // 이후 우리 API 호출 시 Bearer 로 사용
 ```
-1) request-otp  : 전화번호 입력 → 문자로 인증번호 발송
-2) verify-otp   : 인증번호 입력 → 로그인 성공, 토큰 발급
-                  (profile 없으면 needsOnboarding=true)
-3) (신규만) POST /api/profile : 이름·주소 입력해서 가입 완료
-```
-같은 전화번호는 어느 기기에서 로그인해도 **같은 계정**으로 연결됩니다. (폰 교체 OK)
+- 로그인 후 `GET /api/auth/me` → `needsOnboarding: true` 면 이름·전화번호 입력받아 `POST /api/profile` 호출.
+- 카카오는 인증된 전화번호를 (검수 전엔) 안 주므로, 온보딩에서 **전화번호를 직접 입력**받아 `POST /api/profile` 의 `phone` 으로 전송. (카카오싱크 전화번호 검수 통과 후 자동수집으로 전환 예정)
+- `redirectTo` 주소는 Supabase 대시보드 Authentication → URL Configuration 의 Redirect URLs 에 등록돼 있어야 합니다.
+
+### (대안) OTP 문자 인증
+SMS 발송이 연결되면 전화번호 OTP 로그인도 가능합니다 (아래 1·2번). 이 경우 전화번호는 인증값에서 자동 저장됩니다.
 
 ---
 
@@ -94,14 +110,15 @@
 ---
 
 ### 4. POST `/api/profile`  🔒
-온보딩(최초 프로필 생성). **전화번호는 인증된 값으로 자동 저장**되므로 보내지 않습니다.
-(집 주소는 받지 않습니다 — 픽업/드랍은 마을 거점만 가능)
+온보딩(최초 프로필 생성). (집 주소는 받지 않음 — 거점 픽업/드랍만)
 
 **헤더**: `Authorization: Bearer <access_token>`
 **요청**
 ```json
-{ "name": "홍길동" }
+{ "name": "홍길동", "phone": "010-1234-5678" }
 ```
+- **카카오 로그인** 사용자: `phone` 을 함께 보냅니다(인증 전화번호가 없으므로).
+- **OTP 로그인** 사용자: `phone` 은 무시되고 인증된 번호가 자동 저장됩니다.
 **응답 201**
 ```json
 { "profile": { "id": "uuid", "name": "홍길동", ... }, "created": true }

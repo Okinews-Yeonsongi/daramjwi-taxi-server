@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>🐿️ 다람쥐 택시 — 백엔드 테스트 콘솔</title>
 <style>
-  :root { --p:#E8960A; --pl:#FEF3DC; --bg:#F4F2ED; --card:#fff; --green:#1E8A56; --red:#CC3030; }
+  :root { --p:#E8960A; --pl:#FEF3DC; --bg:#F4F2ED; --card:#fff; --green:#1E8A56; --red:#CC3030; --kakao:#FEE500; }
   * { box-sizing: border-box; }
   body { font-family: system-ui, sans-serif; margin:0; background:var(--bg); color:#111; }
   header { background:var(--p); color:#fff; padding:14px 18px; font-weight:800; font-size:18px; position:sticky; top:0; z-index:5; }
@@ -17,6 +17,7 @@
   button.alt { background:#555; }
   button.green { background:var(--green); }
   button.red { background:var(--red); }
+  button.kakao { background:var(--kakao); color:#3c1e1e; }
   input, select { padding:8px; border:1px solid #ccc; border-radius:8px; font-size:14px; margin:3px 0; }
   label { font-size:13px; color:#555; display:inline-block; min-width:60px; }
   #status { padding:8px 12px; background:var(--pl); border-radius:10px; font-size:13px; margin:8px 0; }
@@ -34,10 +35,19 @@
 
 <div class="wrap">
   <div class="card">
-    <h2>0. 로그인 (OTP·문자 없이)</h2>
-    <button onclick="devLogin('resident')">주민으로 로그인</button>
-    <button class="alt" onclick="devLogin('admin')">이장님으로 로그인</button>
-    <div class="muted">테스트 계정 토큰을 바로 발급합니다.</div>
+    <h2>0. 로그인</h2>
+    <button class="kakao" onclick="kakaoLogin()">💬 카카오로 로그인</button>
+    <div class="muted" style="margin:6px 0">— 또는 빠른 테스트 계정 —</div>
+    <button onclick="devLogin('resident')">주민(테스트)</button>
+    <button class="alt" onclick="devLogin('admin')">이장님(테스트)</button>
+  </div>
+
+  <div class="card" id="onboarding" style="display:none; border:2px solid var(--p)">
+    <h2>📝 가입 정보 입력 (카카오 첫 로그인)</h2>
+    <div class="row"><label>이름</label><input id="ob_name" placeholder="이름" /></div>
+    <div class="row"><label>전화번호</label><input id="ob_phone" placeholder="010-0000-0000" /></div>
+    <button class="green" onclick="submitOnboarding()">가입 완료</button>
+    <div class="muted">전화번호 자동수집(카카오싱크)은 검수 통과 후 적용돼요. 지금은 직접 입력.</div>
   </div>
 
   <div class="card">
@@ -84,9 +94,13 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 let TOKEN = null;
+let supabase = null;
 const out = document.getElementById("out");
+const statusEl = document.getElementById("status");
 const log = (label, data) => { out.textContent = label + "\n" + JSON.stringify(data, null, 2); };
 
 // 내일 날짜 기본값
@@ -101,40 +115,72 @@ async function api(path, { method="GET", body } = {}) {
   let j = null; try { j = await res.json(); } catch {}
   return { status: res.status, json: j };
 }
-async function call(path) { const r = await api(path); log(`GET ${path}  →  HTTP ${r.status}`, r.json); return r; }
 
-async function devLogin(role) {
-  const r = await api("/api/dev/login", { method:"POST", body:{ role } });
-  if (r.status === 200) {
-    TOKEN = r.json.access_token;
-    document.getElementById("status").textContent = `✅ 로그인됨: ${r.json.user.name} (${role}) — 토큰 발급 완료`;
-    log("개발용 로그인 성공", r.json.user);
-    loadLocations();
-  } else { log("로그인 실패 (ENABLE_DEV_LOGIN=true 확인)", r.json); }
+async function afterLogin(token, how, kakaoName) {
+  TOKEN = token;
+  const me = await api("/api/auth/me");
+  log("로그인 정보", me.json);
+  if (me.json?.needsOnboarding) {
+    statusEl.textContent = `✅ ${how} 로그인됨 — 가입 정보 입력이 필요해요 (옆 온보딩 카드)`;
+    document.getElementById("onboarding").style.display = "block";
+    if (kakaoName) document.getElementById("ob_name").value = kakaoName;
+  } else {
+    statusEl.textContent = `✅ ${how} 로그인됨: ${me.json?.profile?.name ?? ""}`;
+    document.getElementById("onboarding").style.display = "none";
+  }
+  loadLocations(); loadTimeSlots();
 }
+
+// 카카오용 supabase 초기화 + 리다이렉트 복귀 세션 감지
+try {
+  const cfg = await (await fetch("/api/dev/config")).json();
+  supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    const meta = session.user?.user_metadata || {};
+    await afterLogin(session.access_token, "카카오", meta.name || meta.full_name || meta.nickname || "");
+  } else {
+    loadLocations(); loadTimeSlots(); // 로그인 전에도 드롭다운 채워두기(공개 API)
+  }
+} catch (e) { console.warn("supabase init 실패:", e); loadLocations(); loadTimeSlots(); }
+
+window.kakaoLogin = async () => {
+  if (!supabase) { alert("supabase 초기화가 안 됐어요. 새로고침 해보세요."); return; }
+  await supabase.auth.signInWithOAuth({ provider: "kakao", options: { redirectTo: location.origin + "/dev-console.html" } });
+};
+window.devLogin = async (role) => {
+  const r = await api("/api/dev/login", { method:"POST", body:{ role } });
+  if (r.status === 200) await afterLogin(r.json.access_token, role === "admin" ? "이장님(테스트)" : "주민(테스트)");
+  else log("로그인 실패 (ENABLE_DEV_LOGIN 확인)", r.json);
+};
+window.submitOnboarding = async () => {
+  const name = document.getElementById("ob_name").value;
+  const phone = document.getElementById("ob_phone").value;
+  const r = await api("/api/profile", { method:"POST", body:{ name, phone } });
+  log("프로필 생성", r.json);
+  if (r.status === 201 || r.status === 200) {
+    document.getElementById("onboarding").style.display = "none";
+    statusEl.textContent = "✅ 가입 완료: " + (r.json.profile?.name ?? "");
+  }
+};
+window.call = async (path) => { const r = await api(path); log(`GET ${path}  →  HTTP ${r.status}`, r.json); };
 
 async function loadLocations() {
   const r = await api("/api/locations");
-  const opts = (r.json.locations||[]).map(l => `<option value="${l.id}">${l.emoji||""} ${l.name} (${l.category==="cheongsanmyeon"?"청산면":"읍내"})</option>`).join("");
+  const opts = (r.json?.locations||[]).map(l => `<option value="${l.id}">${l.emoji||""} ${l.name} (${l.category==="cheongsanmyeon"?"청산면":"읍내"})</option>`).join("");
   document.getElementById("dep").innerHTML = opts;
   document.getElementById("arr").innerHTML = opts;
 }
 async function loadTimeSlots() {
   const r = await api("/api/time-slots");
-  document.getElementById("hour").innerHTML = (r.json.timeSlots||[]).map(s => `<option value="${s.hour}">${s.label}</option>`).join("");
+  document.getElementById("hour").innerHTML = (r.json?.timeSlots||[]).map(s => `<option value="${s.hour}">${s.label}</option>`).join("");
 }
-
-// 페이지 열리면 장소·시간 슬롯 자동 채우기 (둘 다 로그인 불필요)
-loadLocations();
-loadTimeSlots();
-
-async function availability() {
+window.availability = async () => {
   const date = document.getElementById("date").value;
   const origin = document.getElementById("origin").value;
-  await call(`/api/availability?date=${date}&origin=${origin}`);
-}
-
-async function book() {
+  await window.call(`/api/availability?date=${date}&origin=${origin}`);
+};
+window.book = async () => {
   const body = {
     date: document.getElementById("date").value,
     hour: Number(document.getElementById("hour").value),
@@ -144,52 +190,47 @@ async function book() {
   };
   const r = await api("/api/reservations", { method:"POST", body });
   log(`POST /api/reservations  →  HTTP ${r.status}`, r.json);
-  if (r.status === 201) myReservations();
-}
-
-async function myReservations() {
+  if (r.status === 201) window.myReservations();
+};
+window.myReservations = async () => {
   const r = await api("/api/reservations/me");
   log(`GET /api/reservations/me  →  HTTP ${r.status}`, r.json);
-  const el = document.getElementById("mylist");
-  el.innerHTML = (r.json.reservations||[]).map(x =>
+  document.getElementById("mylist").innerHTML = (r.json?.reservations||[]).map(x =>
     `<div class="item">${x.reservation_date} ${x.time_label} · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
-     <span class="tag ${x.status}">${x.status}</span>
+     <span class="tag ${x.effective_status}">${x.effective_status}</span>
      <button class="red" onclick="cancelMine(${x.id})">취소</button></div>`).join("") || "<div class='muted'>예약 없음</div>";
-}
-async function cancelMine(id) {
+};
+window.cancelMine = async (id) => {
   const r = await api(`/api/reservations/${id}/cancel`, { method:"PATCH" });
   log(`취소 ${id}  →  HTTP ${r.status}`, r.json);
-  myReservations();
-}
-
-async function adminWaiting() {
+  window.myReservations();
+};
+window.adminWaiting = async () => {
   const r = await api("/api/admin/reservations?status=waiting");
   log(`GET /api/admin/reservations?status=waiting  →  HTTP ${r.status}`, r.json);
-  const el = document.getElementById("adminlist");
-  el.innerHTML = (r.json.reservations||[]).map(x =>
-    `<div class="item">#${x.id} ${x.reservation_date} ${x.time_label} · ${x.resident?.name}(${x.resident?.phone}) · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
+  document.getElementById("adminlist").innerHTML = (r.json?.reservations||[]).map(x =>
+    `<div class="item">#${x.id} ${x.reservation_date} ${x.time_label} · ${x.resident?.name}(${x.resident?.phone})${x.resident?.is_guest?" 📞":""} · 이달 ${x.monthly_confirmed}회 · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
      <button class="green" onclick="adminConfirm(${x.id})">확정</button>
      <button class="red" onclick="adminCancel(${x.id})">취소</button></div>`).join("") || "<div class='muted'>대기 예약 없음</div>";
-}
-async function adminProfiles() {
-  const r = await api("/api/admin/profiles");
-  log(`GET /api/admin/profiles  →  HTTP ${r.status}`, r.json);
-  const el = document.getElementById("adminlist");
-  el.innerHTML = (r.json.profiles||[]).map(p =>
-    `<div class="item">${p.name} <span class="muted">(${p.phone})</span> ${p.role==="admin"?"<span class='tag confirmed'>이장님</span>":""} · 확정 <b style="color:var(--p)">${p.confirmed_count}</b>회</div>`).join("") || "<div class='muted'>주민 없음</div>";
-}
-async function adminConfirm(id) {
+};
+window.adminConfirm = async (id) => {
   const r = await api(`/api/admin/reservations/${id}/confirm`, { method:"PATCH" });
   log(`확정 ${id}  →  HTTP ${r.status}`, r.json);
-  adminWaiting();
-}
-async function adminCancel(id) {
-  const reason = prompt("취소 사유를 입력하세요:", "차량 사정");
+  window.adminWaiting();
+};
+window.adminCancel = async (id) => {
+  const reason = prompt("취소 사유:", "차량 사정");
   if (!reason) return;
   const r = await api(`/api/admin/reservations/${id}/cancel`, { method:"PATCH", body:{ reason } });
   log(`관리자 취소 ${id}  →  HTTP ${r.status}`, r.json);
-  adminWaiting();
-}
+  window.adminWaiting();
+};
+window.adminProfiles = async () => {
+  const r = await api("/api/admin/profiles");
+  log(`GET /api/admin/profiles  →  HTTP ${r.status}`, r.json);
+  document.getElementById("adminlist").innerHTML = (r.json?.profiles||[]).map(p =>
+    `<div class="item">${p.name} <span class="muted">(${p.phone})</span> ${p.role==="admin"?"<span class='tag confirmed'>이장님</span>":""} · 확정 <b style="color:var(--p)">${p.confirmed_count}</b>회</div>`).join("") || "<div class='muted'>주민 없음</div>";
+};
 </script>
 </body>
 </html>
