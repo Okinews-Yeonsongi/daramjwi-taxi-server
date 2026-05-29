@@ -26,7 +26,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // 로그인 버튼
 await supabase.auth.signInWithOAuth({
   provider: "kakao",
-  options: { redirectTo: "<로그인 후 돌아올 우리 앱 주소>" },
+  options: {
+    redirectTo: "<로그인 후 돌아올 우리 앱 주소>",
+    scopes: "profile_nickname", // 이메일(account_email)은 비즈앱 전환 후에만. 닉네임만 요청해 KOE205 회피
+  },
 });
 // → 카카오 동의 → 우리 앱으로 복귀, supabase 세션 자동 생성
 

@@ -146,7 +146,11 @@ try {
 
 window.kakaoLogin = async () => {
   if (!supabase) { alert("supabase 초기화가 안 됐어요. 새로고침 해보세요."); return; }
-  await supabase.auth.signInWithOAuth({ provider: "kakao", options: { redirectTo: location.origin + "/dev-console.html" } });
+  // 이메일(account_email)은 비즈앱에서만 가능 → 닉네임만 요청 (이름/전화는 온보딩에서 입력)
+  await supabase.auth.signInWithOAuth({
+    provider: "kakao",
+    options: { redirectTo: location.origin + "/dev-console.html", scopes: "profile_nickname" },
+  });
 };
 window.devLogin = async (role) => {
   const r = await api("/api/dev/login", { method:"POST", body:{ role } });
