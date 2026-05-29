@@ -83,8 +83,21 @@
     <h2>4. 이장님 (관리자)</h2>
     <button onclick="adminWaiting()">대기 예약 보기</button>
     <button onclick="call('/api/admin/dashboard')">대시보드</button>
-    <button onclick="adminProfiles()">주민 목록 (확정횟수)</button>
     <button onclick="call('/api/admin/stats')">이번달 통계</button>
+
+    <hr/>
+    <div class="muted">📞 전화신청 (이름·전화 입력 + 위 <b>2번</b> 칸의 날짜/시간/출발/도착/인원 사용)</div>
+    <div class="row"><label>이름</label><input id="g_name" placeholder="홍길동" style="width:110px"/>
+      <label>전화</label><input id="g_phone" placeholder="010-0000-0000" style="width:150px"/></div>
+    <button class="green" onclick="guestBook()">전화신청 등록</button>
+
+    <hr/>
+    <div class="muted">🔀 합치기 (아래 대기 목록에서 2건 이상 체크 → 새 시각 선택 → 합치기)</div>
+    <div class="row"><label>새 시각</label>
+      <select id="merge_hour" style="width:70px"></select>
+      <select id="merge_min" style="width:70px"><option>0</option><option>10</option><option>20</option><option>30</option><option>40</option><option>50</option></select> 분
+      <button class="alt" onclick="mergeSelected()">선택 합치기</button>
+    </div>
     <div id="adminlist" class="list"></div>
   </div>
 
@@ -177,7 +190,9 @@ async function loadLocations() {
 }
 async function loadTimeSlots() {
   const r = await api("/api/time-slots");
-  document.getElementById("hour").innerHTML = (r.json?.timeSlots||[]).map(s => `<option value="${s.hour}">${s.label}</option>`).join("");
+  const slots = r.json?.timeSlots || [];
+  document.getElementById("hour").innerHTML = slots.map(s => `<option value="${s.hour}">${s.label}</option>`).join("");
+  document.getElementById("merge_hour").innerHTML = slots.map(s => `<option value="${s.hour}">${s.hour}시</option>`).join("");
 }
 window.availability = async () => {
   const date = document.getElementById("date").value;
@@ -213,9 +228,12 @@ window.adminWaiting = async () => {
   const r = await api("/api/admin/reservations?status=waiting");
   log(`GET /api/admin/reservations?status=waiting  →  HTTP ${r.status}`, r.json);
   document.getElementById("adminlist").innerHTML = (r.json?.reservations||[]).map(x =>
-    `<div class="item">#${x.id} ${x.reservation_date} ${x.time_label} · ${x.resident?.name}(${x.resident?.phone})${x.resident?.is_guest?" 📞":""} · 이달 ${x.monthly_confirmed}회 · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
-     <button class="green" onclick="adminConfirm(${x.id})">확정</button>
-     <button class="red" onclick="adminCancel(${x.id})">취소</button></div>`).join("") || "<div class='muted'>대기 예약 없음</div>";
+    `<div class="item">
+       <label><input type="checkbox" class="merge-chk" value="${x.id}"/> 합치기선택</label>
+       #${x.id} ${x.reservation_date} ${x.time_label} · ${x.resident?.name}(${x.resident?.phone})${x.resident?.is_guest?" 📞전화":""} · 이달 ${x.monthly_confirmed}회 · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
+       <button class="green" onclick="adminConfirm(${x.id})">확정</button>
+       <button class="red" onclick="adminCancel(${x.id})">취소</button>
+     </div>`).join("") || "<div class='muted'>대기 예약 없음</div>";
 };
 window.adminConfirm = async (id) => {
   const r = await api(`/api/admin/reservations/${id}/confirm`, { method:"PATCH" });
@@ -229,11 +247,35 @@ window.adminCancel = async (id) => {
   log(`관리자 취소 ${id}  →  HTTP ${r.status}`, r.json);
   window.adminWaiting();
 };
-window.adminProfiles = async () => {
-  const r = await api("/api/admin/profiles");
-  log(`GET /api/admin/profiles  →  HTTP ${r.status}`, r.json);
-  document.getElementById("adminlist").innerHTML = (r.json?.profiles||[]).map(p =>
-    `<div class="item">${p.name} <span class="muted">(${p.phone})</span> ${p.role==="admin"?"<span class='tag confirmed'>이장님</span>":""} · 확정 <b style="color:var(--p)">${p.confirmed_count}</b>회</div>`).join("") || "<div class='muted'>주민 없음</div>";
+
+// 📞 전화신청 (이장님 대리 입력) — 2번 칸의 날짜/시간/출발/도착/인원 사용
+window.guestBook = async () => {
+  const body = {
+    name: document.getElementById("g_name").value,
+    phone: document.getElementById("g_phone").value,
+    date: document.getElementById("date").value,
+    hour: Number(document.getElementById("hour").value),
+    departure_id: Number(document.getElementById("dep").value),
+    arrival_id: Number(document.getElementById("arr").value),
+    persons: Number(document.getElementById("persons").value),
+  };
+  const r = await api("/api/admin/reservations", { method:"POST", body });
+  log(`전화신청 등록  →  HTTP ${r.status}`, r.json);
+  if (r.status === 201) window.adminWaiting();
+};
+
+// 🔀 합치기 — 체크된 대기예약들을 새 시각으로 묶어 확정
+window.mergeSelected = async () => {
+  const ids = [...document.querySelectorAll(".merge-chk:checked")].map(c => Number(c.value));
+  if (ids.length < 2) { alert("합칠 예약을 2건 이상 체크하세요."); return; }
+  const body = {
+    reservation_ids: ids,
+    new_hour: Number(document.getElementById("merge_hour").value),
+    new_minute: Number(document.getElementById("merge_min").value),
+  };
+  const r = await api("/api/admin/reservations/merge", { method:"POST", body });
+  log(`합치기  →  HTTP ${r.status}`, r.json);
+  window.adminWaiting();
 };
 </script>
 </body>
