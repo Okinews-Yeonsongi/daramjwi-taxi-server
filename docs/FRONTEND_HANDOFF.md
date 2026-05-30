@@ -78,71 +78,145 @@ curl http://localhost:3000/api/health
 
 ---
 
-## 🔐 4. 인증
+## 🔐 4. 인증 — 카카오 OAuth (메인) + 자동 로그인 유지
 
-### 4.1 로그인 (운영 — Supabase Phone OTP)
+### 4.1 로그인 흐름 (운영)
+**카카오 로그인 (닉네임/프사만) + 전화번호 1회 입력**. 사업자등록 없이 동작.
+
+```
+[사용자]                                  [프론트]                              [백엔드]
+   │  '카카오로 시작하기' 클릭                │                                      │
+   ├────────────────────────────────────►│                                      │
+   │                                      │  GET /api/auth/kakao/start?next=/  │
+   │                                      ├────────────────────────────────────►│
+   │  ◄── 302 redirect to kakao.com ───────────────────────────────────────────│
+   │                                                                            │
+   │  카카오 로그인 + 동의 (닉네임/프사)                                          │
+   │  ◄── 302 redirect to /api/auth/kakao/callback?code=... ──────────────────│
+   │                                                                            │
+   │                                      │  GET /api/auth/kakao/callback       │
+   │                                      ├────────────────────────────────────►│
+   │                                      │                                    │ Kakao API로 code→token→user info
+   │                                      │                                    │ profiles에 kakao_id로 매칭/생성
+   │                                      │                                    │ Supabase 세션 토큰 발급
+   │                                      │  ◄── 302 redirect to /#access_token=...&refresh_token=...&needsOnboarding=1
+   │                                      │                                      │
+   │                                      │  fragment에서 토큰 추출 → 저장        │
+   │                                      │  needsOnboarding=1이면 온보딩 화면   │
+```
+
+### 4.2 프론트 구현 (한 줄)
+사용자가 "카카오로 시작하기" 버튼 클릭 시:
+```typescript
+function loginWithKakao() {
+  // next는 콜백 후 돌아올 경로 (이 페이지 그대로 또는 홈)
+  const next = encodeURIComponent(location.pathname);
+  location.href = `${API_BASE}/api/auth/kakao/start?next=${next}`;
+}
+```
+
+### 4.3 콜백 처리 + 토큰 저장 (자동 로그인 핵심)
+페이지 로드 시 URL fragment 검사:
 ```typescript
 import { createClient } from "@supabase/supabase-js";
-const supabase = createClient(URL, ANON_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// 1) OTP 요청
-await supabase.auth.signInWithOtp({ phone: "+821012345678" });
+window.addEventListener("DOMContentLoaded", async () => {
+  // 1) 카카오 콜백에서 돌아온 경우 — fragment에 토큰 있음
+  const frag = new URLSearchParams((location.hash || "").slice(1));
+  const access_token = frag.get("access_token");
+  const refresh_token = frag.get("refresh_token");
+  const needsOnboarding = frag.get("needsOnboarding") === "1";
 
-// 2) OTP 검증
-const { data: { session } } = await supabase.auth.verifyOtp({
-  phone: "+821012345678",
-  token: "123456",
-  type: "sms",
+  if (access_token && refresh_token) {
+    // 영구 저장
+    localStorage.setItem("sb-access", access_token);
+    localStorage.setItem("sb-refresh", refresh_token);
+    history.replaceState(null, "", location.pathname); // URL 정리
+    await supabase.auth.setSession({ access_token, refresh_token });
+    if (needsOnboarding) showOnboarding(); else goHome();
+    return;
+  }
+
+  // 2) 이전에 저장된 토큰이 있으면 자동 로그인 복원
+  const savedAccess = localStorage.getItem("sb-access");
+  const savedRefresh = localStorage.getItem("sb-refresh");
+  if (savedAccess && savedRefresh) {
+    const { error } = await supabase.auth.setSession({
+      access_token: savedAccess,
+      refresh_token: savedRefresh,
+    });
+    if (!error) {
+      // 자동 로그인 성공! supabase-js가 만료된 access_token도 refresh로 자동 갱신
+      goHome();
+      return;
+    }
+    // refresh token도 만료된 경우 → 카카오 다시
+    localStorage.removeItem("sb-access");
+    localStorage.removeItem("sb-refresh");
+  }
+
+  // 3) 어느 것도 아니면 로그인 화면
+  showLogin();
 });
-
-const accessToken = session.access_token;  // 이후 모든 API 호출에 사용
 ```
 
-> ⚠️ **현재 SMS 발신 미연동** — Solapi/CoolSMS 결제 연동 후 운영 가능. 개발 중에는 아래 dev-login 사용.
+**결과 — 어르신 시나리오:**
+- 5/31: 카카오로 시작 → 전화번호 입력 → 가입 완료
+- 6월~12월: 앱 열 때마다 자동 로그인 (액세스 토큰은 백그라운드에서 갱신)
+- 카카오 다시 누를 일 거의 없음 (refresh token이 무한 갱신 가능)
 
-### 4.2 로그인 (개발 — `/api/dev/login`)
-```bash
-# 주민 테스트 계정
-curl -X POST http://localhost:3000/api/dev/login \
-  -H "Content-Type: application/json" \
-  -d '{"role":"resident"}'
-
-# 기사님 테스트 계정
-curl -X POST http://localhost:3000/api/dev/login \
-  -d '{"role":"admin"}'
-
-# → { "access_token": "eyJhbGc...", "user": {...} }
-```
-
-### 4.3 모든 API에 토큰 첨부
+### 4.4 API 호출 (Bearer 토큰)
 ```typescript
-fetch("/api/availability?date=2026-05-31&origin=cheongsanmyeon", {
-  headers: { Authorization: `Bearer ${accessToken}` },
-});
+async function api(path: string, opts: RequestInit = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  return fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers: {
+      ...opts.headers,
+      Authorization: `Bearer ${session?.access_token}`,
+      "Content-Type": "application/json",
+    },
+  });
+}
+```
+> supabase-js가 만료된 토큰을 자동으로 갱신하므로 항상 `getSession()`으로 최신 토큰 가져오세요.
+
+### 4.5 온보딩 (전화번호 입력) — 첫 카카오 가입자만
+- `/api/auth/me` 응답의 `needsOnboarding: true` 이거나 콜백에서 `needsOnboarding=1` fragment 받으면 표시
+- 화면: 이름(카카오 닉네임 자동 채움, 수정 가능) + 전화번호 입력
+- 제출: `POST /api/profile` with `{ name, phone }`
+- 성공하면 홈으로
+- 두 번째 이후 로그인부터는 자동으로 홈 (온보딩 안 뜸)
+
+### 4.6 로그아웃
+```typescript
+async function logout() {
+  await supabase.auth.signOut();
+  localStorage.removeItem("sb-access");
+  localStorage.removeItem("sb-refresh");
+  // 카카오 자체에서도 로그아웃 원하면:
+  // location.href = `https://kauth.kakao.com/oauth/logout?client_id=...&logout_redirect_uri=...`
+  showLogin();
+}
 ```
 
-### 4.4 토큰 만료 + 자동 로그인 유지
-- Supabase `access_token` = 1시간 유효 / `refresh_token` = 장기 (몇 주~몇 달)
-- 카카오 콜백에서 두 토큰 모두 fragment로 전달됨 (`#access_token=...&refresh_token=...`)
-- **자동 로그인 패턴 (프론트 구현):**
-  ```typescript
-  // 콜백에서 받은 토큰 저장
-  localStorage.setItem("sb-access", access_token);
-  localStorage.setItem("sb-refresh", refresh_token);
+### 4.7 개발용 로그인 (`/api/dev/login`) — 로그인 화면 만들기 전까지 임시 사용
+```typescript
+const { access_token, user } = await fetch(`${API_BASE}/api/dev/login`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ role: "resident" }),  // 또는 "admin"
+}).then(r => r.json());
+```
+> 운영 오픈 전 Vercel 환경변수 `ENABLE_DEV_LOGIN=true` 반드시 제거.
 
-  // supabase-js로 세션 복원 (페이지 로드 시)
-  await supabase.auth.setSession({
-    access_token: localStorage.getItem("sb-access")!,
-    refresh_token: localStorage.getItem("sb-refresh")!,
-  });
-  // supabase-js가 access_token 만료 시 refresh_token으로 자동 갱신
-  ```
-- 결과: 어르신은 첫 카카오 로그인 + 전화번호 등록 1번만, 이후 앱 열면 자동 로그인 (몇 달 유지)
-
-### 4.5 온보딩 (전화번호 입력)
-- 카카오 첫 가입자는 `/api/auth/me` 응답에 `needsOnboarding: true`
-- 이때 전화번호 + 이름 입력 화면 표시 → `POST /api/profile` 호출
-- 두 번째 이후 로그인부터는 자동으로 홈 화면으로
+### 4.8 토큰 수명 한눈에
+| 토큰 | 수명 | 갱신 |
+|---|---|---|
+| `access_token` | 1시간 | refresh_token으로 자동 갱신 |
+| `refresh_token` | 30일 (Supabase 기본) | 사용 시마다 갱신 (rolling) — 30일 이내 다시 들어오면 무한 |
+| 카카오 동의 | 영구 | 사용자가 카카오 설정에서 해지하지 않는 한 |
 
 ---
 
@@ -433,6 +507,108 @@ channel.unsubscribe();
 - 주민은 본인 예약 변경 이벤트만 받음.
 - 기사님은 전체 예약 변경 이벤트 받음.
 - `setAuth(token)` 호출 안 하면 변경 이벤트 0개 (RLS가 막음). **꼭 토큰 세팅 후 구독.**
+
+---
+
+## 🔔 6.5 알림 — 웹 푸시 (사업자 X, 0원)
+
+### 6.5.1 알림 종류 4가지 — 백엔드가 자동 발송
+| 트리거 | 누가 → 누구에게 | 푸시 내용 |
+|---|---|---|
+| 기사님 확정 | 기사님 → 주민 | "✅ 예약 확정 — {날짜 시간} · {출발}→{도착}" |
+| 기사님 취소 | 기사님 → 주민 | "❌ 예약 취소 — {날짜 시간} · 사유: {사유}" |
+| 주민 본인 취소 (대기/확정) | 주민 → 본인에게 | "🗑️ 취소 완료" |
+| 주민이 **확정건** 취소 | 주민 → 기사님 전원 | "⚠️ 확정 예약 취소 — {이름} · {시간}" |
+
+> 전화신청(guest, `is_guest=true`) 건은 사용자 계정이 없어 푸시 대상 X. 기사님이 전화로 안내.
+
+### 6.5.2 프론트가 해야 할 일 — Service Worker + 구독 등록
+
+#### a) `public/sw.js` 배치 (서비스 워커, 푸시 수신용)
+이미 작성됨 ([`public/sw.js`](../public/sw.js)). 프론트 앱에서도 같은 파일 또는 더 발전된 형태로 배치하면 됨. 최소 사양:
+```javascript
+self.addEventListener('push', (event) => {
+  const payload = event.data?.json() || {};
+  event.waitUntil(self.registration.showNotification(payload.title, {
+    body: payload.body,
+    icon: '/icon-192.png',
+    badge: '/badge-72.png',
+    tag: payload.tag,
+    data: { url: payload.url || '/' },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(self.clients.openWindow(url));
+});
+```
+
+#### b) 로그인 후 구독 등록 (사용자 클릭 안에서 권한 요청!)
+```typescript
+async function enablePushNotifications() {
+  // iOS Safari는 PWA(홈화면 추가) 모드만 푸시 가능
+  if (isIOS() && !isInStandalone()) {
+    showIosInstallGuide();
+    return;
+  }
+
+  const reg = await navigator.serviceWorker.register("/sw.js");
+  await navigator.serviceWorker.ready;
+
+  // 권한 요청은 반드시 사용자 클릭 핸들러 안에서!
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") return;
+
+  // VAPID 공개키 받아서 푸시 구독
+  const { publicKey } = await fetch(`${API_BASE}/api/push/public-key`).then(r => r.json());
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
+  });
+
+  // 백엔드에 구독 저장 (이후 백엔드가 이 endpoint로 푸시 보냄)
+  await api("/api/push/subscribe", {
+    method: "POST",
+    body: JSON.stringify({
+      endpoint: sub.endpoint,
+      keys: { p256dh: sub.toJSON().keys.p256dh, auth: sub.toJSON().keys.auth },
+      user_agent: navigator.userAgent.slice(0, 200),
+    }),
+  });
+}
+
+function urlBase64ToUint8Array(base64: string): Uint8Array {
+  const padding = "=".repeat((4 - base64.length % 4) % 4);
+  const b64 = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(b64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+```
+
+### 6.5.3 iOS Safari 특수 — 홈 화면 추가 필수
+- iOS는 **iOS 16.4+ + 홈 화면 추가(PWA 모드)** 에서만 웹 푸시 동작
+- 일반 Safari 탭에서는 `Notification.requestPermission()` 무시됨
+- 사용자에게 안내 필요:
+  > 📱 알림을 받으려면 **공유 버튼 → "홈 화면에 추가"** 후 그 아이콘으로 실행해주세요.
+
+PWA 매니페스트는 [`public/manifest.json`](../public/manifest.json)에 있음. 프론트도 비슷한 manifest 작성 + apple-touch-icon 메타 추가.
+
+### 6.5.4 푸시 관련 API
+| 엔드포인트 | 메소드 | 설명 |
+|---|---|---|
+| `/api/push/public-key` | GET | VAPID 공개키 받기 (공개, 인증 X) |
+| `/api/push/subscribe` | POST 🔒 | 푸시 구독 정보 저장 |
+| `/api/push/subscribe?endpoint=...` | DELETE 🔒 | 구독 해지 |
+
+### 6.5.5 사업자등록 후 확장 (선택)
+사장님이 사업자등록증 받으면:
+- 솔라피 (Solapi) 연동 → 푸시 + SMS 동시 발송 (`lib/notify.ts`에 추가만 하면 됨)
+- 카카오 알림톡 (비즈채널 + 템플릿 심사 후) → 더 풍부한 메시지
+- 백엔드 코드 변경만 필요, 프론트는 변경 없음 (호출하는 API 동일)
 
 ---
 
