@@ -1003,7 +1003,9 @@ async function refreshAdminHome(){
 window.switchWTab=function(t){curWTab=t;editMode=false;selIds=[];['waiting','confirmed','cancelled'].forEach(k=>{$('wtab-'+(k==='waiting'?'w':k==='confirmed'?'c':'x')).classList.toggle('on',k===t);});renderWaiting();};
 async function renderWaiting(){
   const r=await api('/api/admin/reservations?status='+curWTab);
-  const list=r.json?.reservations||[];
+  let list=r.json?.reservations||[];
+  // 확정 탭에서 effective_status='completed'(과거 슬롯) 숨김 — 완료된 운행은 마을 현황·통계에서만 봄
+  if(curWTab==='confirmed') list=list.filter(x=>x.effective_status!=='completed');
   waitingCache=list;
   let h='';
   if(curWTab==='waiting'){
@@ -1016,7 +1018,8 @@ async function renderWaiting(){
 }
 function waitItemHTML(x){
   const isSel=selIds.indexOf(x.id)>-1;
-  const lbl=SLOTS.find(s=>s.hour===x.hour)?.label||x.hour+'시';
+  // 서버가 time_label("오전 10시 30분")까지 내려주면 그걸 쓰고, 없으면 hour만 fallback
+  const lbl=x.time_label||(SLOTS.find(s=>s.hour===x.hour)?.label||x.hour+'시');
   const srcBadge=x.resident?.is_guest?'<span class="wi-src">📞 전화</span>':'';
   const usageBadge='<span class="wi-usage">이달 '+(x.monthly_confirmed||0)+'회</span>';
   const checkEl=editMode?'<span class="check-circle'+(isSel?' on':'')+'"></span>':'';
@@ -1039,7 +1042,7 @@ function showConfirm(q,sub,okLbl,okCls,cb){
 }
 window.adminConfirm=function(id){
   const x=waitingCache.find(r=>r.id===id);if(!x)return;
-  showConfirm('확정하시겠습니까?',x.resident?.name+' 님 · '+fmtDate(x.reservation_date)+' '+(SLOTS.find(s=>s.hour===x.hour)?.label||''),'확정 알림 발송','bg2',async()=>{
+  showConfirm('확정하시겠습니까?',x.resident?.name+' 님 · '+fmtDate(x.reservation_date)+' '+(x.time_label||SLOTS.find(s=>s.hour===x.hour)?.label||''),'확정 알림 발송','bg2',async()=>{
     const r=await api('/api/admin/reservations/'+id+'/confirm',{method:'PATCH'});
     if(r.status===200)toast('💬 '+x.resident?.name+' 님께 확정 알림 발송');else toast(r.json?.error||'확정 실패');
     renderWaiting();
@@ -1063,7 +1066,7 @@ window.openMerge=function(){
   const sels=mergeIds.map(id=>waitingCache.find(r=>r.id===id)).filter(Boolean);
   const names=sels.map(r=>r.resident?.name).join(', ');
   $('merge-sub').textContent=sels.length+'건 합치기: '+names;
-  $('merge-preview').innerHTML=sels.map(r=>'<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);color:var(--text-muted);">'+r.resident?.name+' · '+(SLOTS.find(s=>s.hour===r.hour)?.label||r.hour+'시')+' · '+r.departure?.name+'→'+r.arrival?.name+'</div>').join('');
+  $('merge-preview').innerHTML=sels.map(r=>'<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);color:var(--text-muted);">'+r.resident?.name+' · '+(r.time_label||SLOTS.find(s=>s.hour===r.hour)?.label||r.hour+'시')+' · '+r.departure?.name+'→'+r.arrival?.name+'</div>').join('');
   dialH=sels[0]?.hour||9;dialM=0;updateDial();
   $('mod-merge').classList.add('on');
 };
@@ -1117,7 +1120,7 @@ async function showWeekDetail(s){
   const r=await api('/api/admin/reservations?date='+s);
   const list=(r.json?.reservations||[]).filter(x=>x.effective_status!=='cancelled');
   $('week-detail-list').innerHTML=list.length?list.map(x=>{
-    const lbl=SLOTS.find(t=>t.hour===x.hour)?.label||x.hour+'시';
+    const lbl=x.time_label||SLOTS.find(t=>t.hour===x.hour)?.label||x.hour+'시';
     return '<div class="wait-item" style="border-bottom:1px solid var(--border);"><div class="wi-date-badge">'+lbl+'</div><div class="wi-top"><span class="wi-name">'+x.resident?.name+'</span><span class="res-badge badge-'+x.effective_status+'">'+({waiting:'대기',confirmed:'확정',completed:'완료'}[x.effective_status]||'')+'</span></div><div class="wi-route">'+x.departure?.name+' → '+x.arrival?.name+' · '+x.persons+'명</div></div>';
   }).join(''):'<div class="empty">이날 신청이 없어요</div>';
   $('week-detail').style.display='block';
