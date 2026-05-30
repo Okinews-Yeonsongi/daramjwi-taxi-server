@@ -7,7 +7,7 @@ import { notifyAdminSelfCancel, notifyResidentSelfCancelled } from "@/lib/notify
  * PATCH /api/reservations/:id/cancel   🔒
  * 본인 예약 취소. 운행 시작 시각 이후엔 취소 불가.
  * - 카운트(한도/확정횟수)는 status로 계산하므로 자동 복구됨.
- * - 알림: 항상 본인에게 취소 확인 + 확정 예약이었으면 이장님께도 알림. (현재는 로그 스텁)
+ * - 알림: 항상 본인에게 취소 확인 + 확정 예약이었으면 기사님께도 알림. (현재는 로그 스텁)
  */
 export async function PATCH(
   request: Request,
@@ -61,7 +61,7 @@ export async function PATCH(
     return apiError("예약 상태가 방금 변경됐어요. 새로고침 후 다시 시도해 주세요.", 409);
   }
 
-  // 알림: 항상 본인에게 취소 확인 + 확정이었으면 이장님에게도. (실패해도 취소는 유효)
+  // 알림: 항상 본인에게 취소 확인 + 확정이었으면 기사님에게도. (실패해도 취소는 유효)
   try {
     const [{ data: prof }, { data: locs }] = await Promise.all([
       auth.supabase.from("profiles").select("name, phone").eq("id", auth.user.id).maybeSingle(),
@@ -83,7 +83,7 @@ export async function PATCH(
     // case 3: 항상 본인에게 취소 확인
     await notifyResidentSelfCancelled(party);
 
-    // case 4: 확정 예약 본인 취소면 이장님에게도
+    // case 4: 확정 예약 본인 취소면 기사님에게도
     if (existing.status === "confirmed") {
       await notifyAdminSelfCancel({ ...party, persons: existing.persons });
     }

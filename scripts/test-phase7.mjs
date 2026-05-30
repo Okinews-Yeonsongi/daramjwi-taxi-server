@@ -1,4 +1,4 @@
-// Phase 7 자동 테스트: 이장님(admin) API
+// Phase 7 자동 테스트: 기사님(admin) API
 // 실행: node --env-file=.env.local scripts/test-phase7.mjs  (서버가 localhost:3000 에 떠 있어야 함)
 import { createClient } from "@supabase/supabase-js";
 
@@ -47,7 +47,7 @@ async function main() {
   console.log("0) 준비 (admin + resident)");
   const adminId = await ensureUser(ADMIN_EMAIL, ADMIN_PW);
   const resId = await ensureUser(RES_EMAIL, RES_PW);
-  await admin.from("profiles").upsert({ id: adminId, phone: "01088887777", name: "이장님", role: "admin" });
+  await admin.from("profiles").upsert({ id: adminId, phone: "01088887777", name: "기사님", role: "admin" });
   await admin.from("profiles").upsert({ id: resId, phone: "01099990000", name: "테스트주민", role: "resident" });
   await admin.from("reservations").delete().eq("user_id", resId);
   const aTok = await token(ADMIN_EMAIL, ADMIN_PW);
@@ -72,7 +72,7 @@ async function main() {
   console.log("\n3) 확정");
   const conf = await api(`/api/admin/reservations/${rid}/confirm`, { method: "PATCH", token: aTok });
   check("확정 200 + status confirmed", conf.status === 200 && conf.json?.reservation?.status === "confirmed", JSON.stringify(conf.json).slice(0, 150));
-  check("confirmed_by=이장님", conf.json?.reservation?.confirmed_by === adminId);
+  check("confirmed_by=기사님", conf.json?.reservation?.confirmed_by === adminId);
   check("이미 확정 재확정 → 400", (await api(`/api/admin/reservations/${rid}/confirm`, { method: "PATCH", token: aTok })).status === 400);
 
   console.log("\n4) 취소(사유 필수)");

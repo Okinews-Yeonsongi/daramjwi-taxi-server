@@ -5,7 +5,7 @@ import type { UserRole } from "@/lib/supabase/types";
 
 /**
  * POST /api/dev/login   ⚠️ 개발 전용 (ENABLE_DEV_LOGIN=true 일 때만 작동)
- * OTP/문자 없이 테스트 계정(주민/이장님)의 로그인 토큰을 바로 발급합니다.
+ * OTP/문자 없이 테스트 계정(주민/기사님)의 로그인 토큰을 바로 발급합니다.
  * 운영 환경에서는 환경변수를 켜지 않으므로 404를 반환합니다.
  *
  * body: { role?: "resident" | "admin" }
@@ -23,7 +23,7 @@ const ACCOUNTS = {
   admin: {
     email: "dev-admin@example.com",
     password: "dev-1234!",
-    name: "이장님",
+    name: "기사님",
     phone: "01020002000",
     role: "admin" as UserRole,
   },

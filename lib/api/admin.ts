@@ -8,7 +8,7 @@ type AuthCtx = NonNullable<Awaited<ReturnType<typeof getAuthUser>>>;
 type ReservationRow = Database["public"]["Tables"]["reservations"]["Row"];
 
 /**
- * 관리자(이장님) 권한 확인.
+ * 관리자(기사님) 권한 확인.
  * 성공: { auth, db }  (db는 service_role 클라이언트 = 마을 전체 접근/수정)
  * 실패: { error: Response }
  */

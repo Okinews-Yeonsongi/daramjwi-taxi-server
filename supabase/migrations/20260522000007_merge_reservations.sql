@@ -1,5 +1,5 @@
 -- =============================================================
--- 0007 합치기(이장님 수동 조율) 지원
+-- 0007 합치기(기사님 수동 조율) 지원
 --  - departure_minute: 출발 시각의 분(10분 단위). 일반 예약은 0, 합치기 시만 변경.
 --  - merge_reservations_admin: 선택된 대기 예약 N건을 같은 차/같은 시각으로 묶어 자동 확정.
 --    조건: 모두 waiting / 같은 날짜 / 같은 출발지역 / 시간차 ≤ 1시간 / 인원합 ≤ 4.
@@ -13,7 +13,7 @@ ALTER TABLE reservations DROP CONSTRAINT IF EXISTS chk_reservation_minute;
 ALTER TABLE reservations ADD CONSTRAINT chk_reservation_minute
   CHECK (departure_minute IN (0, 10, 20, 30, 40, 50));
 
--- 합치기 함수 (이장님 / service_role 전용)
+-- 합치기 함수 (기사님 / service_role 전용)
 CREATE OR REPLACE FUNCTION merge_reservations_admin(
   p_reservation_ids BIGINT[],
   p_new_hour INT,

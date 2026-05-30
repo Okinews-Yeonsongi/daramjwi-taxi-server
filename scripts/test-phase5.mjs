@@ -104,7 +104,7 @@ async function main() {
   const cp = await cancel(token, past.id);
   check("지난 운행 취소 → 400", cp.status === 400 && /운행/.test(cp.json?.error || ""), JSON.stringify(cp.json));
 
-  console.log("\n7) 확정 예약 본인 취소 → 200 (이장님 알림 스텁은 서버 로그)");
+  console.log("\n7) 확정 예약 본인 취소 → 200 (기사님 알림 스텁은 서버 로그)");
   const conf = (await admin.from("reservations").insert({
     user_id: userId, reservation_date: date, hour: 16, persons: 2,
     departure_location_id: 1, arrival_location_id: 4, vehicle_id: vA, status: "confirmed",

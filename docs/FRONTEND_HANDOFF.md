@@ -107,7 +107,7 @@ curl -X POST http://localhost:3000/api/dev/login \
   -H "Content-Type: application/json" \
   -d '{"role":"resident"}'
 
-# 이장님 테스트 계정
+# 기사님 테스트 계정
 curl -X POST http://localhost:3000/api/dev/login \
   -d '{"role":"admin"}'
 
@@ -278,7 +278,7 @@ Supabase access_token = 1시간. 자동 갱신은 supabase-js 클라이언트가
 
 ---
 
-### 5.6 이장님 (admin)
+### 5.6 기사님 (admin)
 
 > 모두 `🔐 admin` 권한 필요. RLS + `is_admin()` 함수가 이중 체크.
 
@@ -326,7 +326,7 @@ Supabase access_token = 1시간. 자동 갱신은 supabase-js 클라이언트가
 ```
 
 #### `POST /api/admin/reservations` 🔐 (전화 신청)
-주민이 직접 신청하지 못해 이장님이 대신. body:
+주민이 직접 신청하지 못해 기사님이 대신. body:
 ```json
 {
   "guest_name": "박할머니",
@@ -403,15 +403,15 @@ channel.unsubscribe();
 ### 6.2 언제 발생?
 | 동작 | 누가 신호 받음 |
 |---|---|
-| 주민 신청 | 이장님(대기 탭) |
-| 이장님 확정 | 주민(내 예약), 이장님(대기↔확정) |
-| 이장님 취소 | 주민, 이장님(확정→취소) |
-| 주민 자가 취소 | 이장님 |
+| 주민 신청 | 기사님(대기 탭) |
+| 기사님 확정 | 주민(내 예약), 기사님(대기↔확정) |
+| 기사님 취소 | 주민, 기사님(확정→취소) |
+| 주민 자가 취소 | 기사님 |
 | 합치기 | 양쪽 모두 |
 
 ### 6.3 RLS와 권한
 - 주민은 본인 예약 변경 이벤트만 받음.
-- 이장님은 전체 예약 변경 이벤트 받음.
+- 기사님은 전체 예약 변경 이벤트 받음.
 - `setAuth(token)` 호출 안 하면 변경 이벤트 0개 (RLS가 막음). **꼭 토큰 세팅 후 구독.**
 
 ---
@@ -445,8 +445,8 @@ channel.unsubscribe();
 
 ### 7.4 상태 (Status)
 DB의 `status` 5종:
-- `waiting`: 신청만 됨, 이장님 확정 대기
-- `confirmed`: 이장님 확정됨
+- `waiting`: 신청만 됨, 기사님 확정 대기
+- `confirmed`: 기사님 확정됨
 - `cancelled`: 누가 취소함
 - `completed`: 사용 안 함 (effective_status로만 계산)
 
@@ -458,10 +458,10 @@ UI에서는 항상 `effective_status` 사용 권장.
 
 ### 7.5 알림 케이스 (현재 stub — 콘솔 로그만)
 연동 시 실제 발송:
-1. 이장님 확정 → **주민에게** "○월 ○일 ○시 확정"
-2. 이장님 취소 → **주민에게** "○월 ○일 ○시 취소 (사유)"
+1. 기사님 확정 → **주민에게** "○월 ○일 ○시 확정"
+2. 기사님 취소 → **주민에게** "○월 ○일 ○시 취소 (사유)"
 3. 주민 자가 취소(대기/확정) → **주민에게** "취소되었습니다"
-4. 주민이 **확정건** 취소 → **이장님에게** "○○님 취소"
+4. 주민이 **확정건** 취소 → **기사님에게** "○○님 취소"
 
 ---
 
@@ -511,7 +511,7 @@ node --env-file=.env.local scripts/test-item56.mjs   # 위치 추적
 
 ### 10.2 프론트 배포 — 권장: **두 앱 분리**
 
-주민 / 이장님은 사용자층·UI 요구가 완전히 다르므로 **앱 두 개로 분리하는 걸 강력 추천**:
+주민 / 기사님은 사용자층·UI 요구가 완전히 다르므로 **앱 두 개로 분리하는 걸 강력 추천**:
 
 ```
 백엔드 (1개, 이미 있음)
@@ -519,7 +519,7 @@ node --env-file=.env.local scripts/test-item56.mjs   # 위치 추적
                  ↑   ↑
         ┌────────┘   └────────┐
         │                     │
-  주민용 프론트          이장님용 프론트
+  주민용 프론트          기사님용 프론트
   daramjwi-resident      daramjwi-admin
   (어르신 친화: 큰 글씨·큰 버튼·   (관리자 UI:
    단순한 흐름)                    캘린더·통계·합치기)
@@ -529,9 +529,9 @@ node --env-file=.env.local scripts/test-item56.mjs   # 위치 추적
 ```
 
 **왜 분리:**
-- 사용자: 어르신(60~80대) vs 이장님(중장년 관리자) — UX 요구가 완전 다름
-- 화면: 주민은 신청·내 예약 정도, 이장님은 캘린더·통계·합치기·전화신청 등 훨씬 복잡
-- 배포 주기: 이장님 기능 추가가 주민 앱 영향 X (반대도 동일)
+- 사용자: 어르신(60~80대) vs 기사님(중장년 관리자) — UX 요구가 완전 다름
+- 화면: 주민은 신청·내 예약 정도, 기사님은 캘린더·통계·합치기·전화신청 등 훨씬 복잡
+- 배포 주기: 기사님 기능 추가가 주민 앱 영향 X (반대도 동일)
 - 보안: 주민 앱에 admin API 호출 코드가 아예 없음 → 공격 표면 축소
 
 **백엔드 변경 0**: 두 앱 모두 같은 `daramjwi-taxi-server.vercel.app` 부르면 됨. Bearer 토큰의 role로 자동 권한 분기 (`is_admin()` 함수 + RLS).
@@ -573,7 +573,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxxxx
 - [`docs/PROJECT_SPEC.md`](./PROJECT_SPEC.md) — 비즈니스 명세
 - [`docs/HANDOFF.md`](./HANDOFF.md) — 백엔드 개발 히스토리
 - [`docs/TEST_CHECKLIST.md`](./TEST_CHECKLIST.md) — 수동 검증 체크리스트
-- [`docs/prototypes/admin-prototype.html`](./prototypes/admin-prototype.html) — 이장님용 UI 프로토타입
+- [`docs/prototypes/admin-prototype.html`](./prototypes/admin-prototype.html) — 기사님용 UI 프로토타입
 - [`docs/prototypes/resident-prototype.html`](./prototypes/resident-prototype.html) — 주민용 UI 프로토타입
 - `supabase/migrations/*` — DB 스키마 + RPC 함수 (0001~0009)
 

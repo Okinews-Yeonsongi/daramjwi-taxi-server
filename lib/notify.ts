@@ -8,7 +8,7 @@ type Party = {
   residentPhone: string;
   date: string;
   hour: number;
-  minute?: number; // 10분 단위, 기본 0 (이장님 합치기로 조율된 경우만 0이 아님)
+  minute?: number; // 10분 단위, 기본 0 (기사님 합치기로 조율된 경우만 0이 아님)
   departureName: string;
   arrivalName: string;
 };
@@ -18,7 +18,7 @@ function timeText(h: number, m?: number): string {
   return m && m > 0 ? `${h}시 ${m}분` : `${h}시`;
 }
 
-/** 이장님 확정 → 주민에게 */
+/** 기사님 확정 → 주민에게 */
 export async function notifyResidentConfirmed(info: Party): Promise<void> {
   console.log(
     `[SMS-STUB→${info.residentPhone}] ${info.residentName}님, ${info.date} ${timeText(info.hour, info.minute)} ` +
@@ -26,7 +26,7 @@ export async function notifyResidentConfirmed(info: Party): Promise<void> {
   );
 }
 
-/** 이장님 취소 → 주민에게 (사유 포함) */
+/** 기사님 취소 → 주민에게 (사유 포함) */
 export async function notifyResidentCancelled(info: Party & { reason: string }): Promise<void> {
   console.log(
     `[SMS-STUB→${info.residentPhone}] ${info.residentName}님, ${info.date} ${timeText(info.hour, info.minute)} ` +
@@ -42,7 +42,7 @@ export async function notifyResidentSelfCancelled(info: Party): Promise<void> {
   );
 }
 
-/** 주민이 '확정된' 예약을 본인 취소 → 이장님에게 */
+/** 주민이 '확정된' 예약을 본인 취소 → 기사님에게 */
 export async function notifyAdminSelfCancel(info: {
   residentName: string;
   date: string;
@@ -53,7 +53,7 @@ export async function notifyAdminSelfCancel(info: {
   persons: number;
 }): Promise<void> {
   console.log(
-    `[SMS-STUB→이장님] ${info.residentName}님이 ${info.date} ${timeText(info.hour, info.minute)} 예약을 취소했어요. ` +
+    `[SMS-STUB→기사님] ${info.residentName}님이 ${info.date} ${timeText(info.hour, info.minute)} 예약을 취소했어요. ` +
       `노선: ${info.departureName}→${info.arrivalName}, 인원 ${info.persons}명.`
   );
 }

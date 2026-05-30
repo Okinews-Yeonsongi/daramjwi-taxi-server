@@ -117,7 +117,7 @@ type GuestBookingBody = {
 
 /**
  * POST /api/admin/reservations   🔒(admin)
- * 이장님이 전화 신청을 대신 입력 (비회원). 매번 이름+연락처 입력 (저장 안 함).
+ * 기사님이 전화 신청을 대신 입력 (비회원). 매번 이름+연락처 입력 (저장 안 함).
  * body: { name, phone, date, hour, departure_id, arrival_id, persons }
  */
 export async function POST(request: Request) {

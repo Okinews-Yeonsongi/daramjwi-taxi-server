@@ -9,7 +9,7 @@
 
 ## 1. 프로젝트 한 줄
 
-충북 옥천군 청산면 마을 공동 택시(2대, 청산면↔읍내 셔틀)를 주민이 앱으로 신청하고 이장님이 확정/취소하는 시스템의 **백엔드 전용 레포**. (프론트엔드는 별도 레포 `daramjwi-taxi-client`)
+충북 옥천군 청산면 마을 공동 택시(2대, 청산면↔읍내 셔틀)를 주민이 앱으로 신청하고 기사님이 확정/취소하는 시스템의 **백엔드 전용 레포**. (프론트엔드는 별도 레포 `daramjwi-taxi-client`)
 
 - 레포: `https://github.com/Okinews-Yeonsongi/daramjwi-taxi-server`
 - 사용자(=이 레포 개발자): 비전공자. 한국어 안내 우선.
@@ -110,7 +110,7 @@ docs/
 - `GET /api/runs/today` — 오늘 운행 (차량 식별 비공개)
 - `GET /api/stats/village` — `daily.used`, `monthly.{used, remaining, passengers, avg_passengers_per_run}`
 
-### 이장님(관리자) 🔒(admin)
+### 기사님(관리자) 🔒(admin)
 - `GET /api/admin/dashboard` — 오늘 요약 + 한도(운행 수 기준)
 - `GET /api/admin/reservations?status=&date=` — 목록(resident.name/phone, `is_guest`, **`monthly_confirmed`**, **`effective_status`**)
 - `POST /api/admin/reservations` — **전화신청(비회원 게스트 예약)**
@@ -121,7 +121,7 @@ docs/
 - `GET /api/admin/stats?month=YYYY-MM` — 월 통계 (`confirmed_runs`, `by_day`)
 
 ### 개발용 (`ENABLE_DEV_LOGIN=true`)
-- `POST /api/dev/login` — 테스트 계정(주민/이장님) 토큰 즉시 발급
+- `POST /api/dev/login` — 테스트 계정(주민/기사님) 토큰 즉시 발급
 - `GET /api/dev/config` — 공개 Supabase URL/anon (콘솔의 supabase-js용)
 - `GET /api/health`
 
@@ -137,24 +137,24 @@ docs/
    - 1일 4회 / 1월 112회
    - 이미 확정된 같은 운행에 합류하는 확정은 한도 미소모
 8. 요금: 1,700원 (현장 결제, 앱 결제 없음)
-9. 운행 시작 후 본인 취소 불가 (이장님은 가능)
-10. RLS — 주민은 본인 것만, 이장님(`is_admin()`)은 전체
+9. 운행 시작 후 본인 취소 불가 (기사님은 가능)
+10. RLS — 주민은 본인 것만, 기사님(`is_admin()`)은 전체
 
 ## 8. 알림 (현재 모두 console.log 스텁, Phase 8에서 실제 발송)
 
 | # | 트리거 | 받는 사람 |
 |---|---|---|
-| 1 | 이장님 **확정** | 주민 |
-| 2 | 이장님 **취소** (사유 포함) | 주민 |
+| 1 | 기사님 **확정** | 주민 |
+| 2 | 기사님 **취소** (사유 포함) | 주민 |
 | 3 | 주민 **본인 취소** (대기/확정 둘 다) | 주민 본인 (확인) |
-| 4 | 주민이 **확정** 본인 취소 | 이장님 (#3과 함께 발송) |
+| 4 | 주민이 **확정** 본인 취소 | 기사님 (#3과 함께 발송) |
 
 발송 대상 phone: 회원 = profile.phone, 전화예약(게스트) = guest_phone. 시간은 hour+departure_minute(분 0 아니면 "X시 Y분"으로 포맷).
 
 ## 9. 실시간 동기화 (Realtime, migration 6)
 
 `reservations` 테이블 Supabase Realtime 활성화. 프론트는 `supabase.channel().on('postgres_changes', ...)`로 구독.
-- RLS 그대로 적용 → 이장님은 전체 변경, 주민은 본인 것만 수신
+- RLS 그대로 적용 → 기사님은 전체 변경, 주민은 본인 것만 수신
 - 계산값(잔여 횟수/탑승자 수)은 이벤트 받으면 해당 GET 재호출
 
 ## 10. 현재 상태 요약
@@ -182,15 +182,15 @@ docs/
 
 ### 🎨 ⭐ 디자인·UX 참고 — 기존 프로토타입 HTML (필독)
 - **주민용 프로토타입**: `docs/prototypes/resident-prototype.html` (모바일 폰 셸 + 5단계 step bar + 신청 흐름)
-- **이장님 화면 프로토타입**: `docs/prototypes/admin-prototype.html` (모바일 폰 셸 + 합치기 다이얼 + 6단계 전화신청 + 주간 캘린더)
+- **기사님 화면 프로토타입**: `docs/prototypes/admin-prototype.html` (모바일 폰 셸 + 합치기 다이얼 + 6단계 전화신청 + 주간 캘린더)
 - 새 테스트 콘솔의 **UI/색감/배치/플로우는 이 두 프로토타입을 그대로 따를 것**. 색상 토큰·폰트 크기·둥근 모서리·터치 영역까지 모두 보존.
 - **데이터·동작은 우리 백엔드 API**(아래 11.2/11.3 + `docs/API.md`)로 갈아끼울 것.
 - 두 프로토타입에 하드코딩된 더미 배열(`reqs` 등) → 실제 API 호출 (예: `/api/reservations/me`, `/api/admin/reservations`, `/api/runs/today`, `/api/admin/stats` 등)
-- 한 화면에 **주민용·이장님용 토글** 또는 **로그인 후 role에 따라 자동 라우팅** 권장.
+- 한 화면에 **주민용·기사님용 토글** 또는 **로그인 후 role에 따라 자동 라우팅** 권장.
 
 ### 11.1 로그인
 - ❌ 카카오 로그인 버튼은 **숨기거나 "사업자등록 후 사용 가능"으로 비활성** 표시 (개인앱이라 KOE205)
-- ✅ **주민(테스트) / 이장님(테스트)** 버튼 — `POST /api/dev/login {role}` → 토큰 즉시 발급
+- ✅ **주민(테스트) / 기사님(테스트)** 버튼 — `POST /api/dev/login {role}` → 토큰 즉시 발급
 - 로그인 후 `GET /api/auth/me`로 needsOnboarding 체크 → 첫 로그인이면 이름·전화 입력 폼(`POST /api/profile`)
 
 ### 11.2 주민용 화면 (시뮬레이션) — 다음 흐름·UI 포함
@@ -216,7 +216,7 @@ docs/
    - "오늘 운행 N회" (daily.used)
    - "평균 탑승자 N.N명" (monthly.avg_passengers_per_run) — `.toFixed(1)` 포맷
 
-### 11.3 이장님(관리자) 화면 (시뮬레이션) — 다음 기능 포함
+### 11.3 기사님(관리자) 화면 (시뮬레이션) — 다음 기능 포함
 - **대시보드** — 오늘 상태별 건수 + 한도 잔여(`/api/admin/dashboard`)
 - **대기/확정/취소 탭** — `/api/admin/reservations?status=` 필터링
   - 각 카드에 **이름·이번달 N회·연락처·출발/도착·인원·effective_status 배지**
@@ -231,7 +231,7 @@ docs/
 
 ### 11.4 실시간 동기화
 - 콘솔이 supabase-js로 `reservations` 채널 구독
-- 주민/이장님 어느 쪽 변경이든 즉시 화면 갱신 + 마을현황·대시보드 GET 재호출
+- 주민/기사님 어느 쪽 변경이든 즉시 화면 갱신 + 마을현황·대시보드 GET 재호출
 
 ### 11.5 UI/UX 가이드
 - 색상 토큰 (PROJECT_SPEC 8.3): primary `#E8960A`, bg `#F4F2ED`, green `#1E8A56`, red `#CC3030`
@@ -267,11 +267,11 @@ node --env-file=.env.local scripts/test-item56.mjs
 - **요금/한도**: 1,700원, 일 4회/월 112회 (운행 횟수 기준, 합승 1회).
 - **합치기**: 같은 날짜+같은 출발지역+시간차 ≤ 1h+인원합 ≤ 4. 10분 단위 시각.
 - **장소**: 청산면 4개 거점 + 읍내 3곳 (집 주소 없음).
-- **전화예약**: 이장님이 매번 이름·전화 입력 (저장 안 함, 같은 번호면 자동 집계).
-- **이장님 화면에 주민 명단 페이지 폐지** → 대신 예약 목록에 `monthly_confirmed` 표시.
+- **전화예약**: 기사님이 매번 이름·전화 입력 (저장 안 함, 같은 번호면 자동 집계).
+- **기사님 화면에 주민 명단 페이지 폐지** → 대신 예약 목록에 `monthly_confirmed` 표시.
 
 ---
 
 **이 문서로 새 채팅에서 바로 작업 가능합니다.** 새 채팅에게 줄 한 줄 요청 예시:
 
-> "`docs/HANDOFF.md`의 11번(테스트 콘솔 요구사항)을 다 담은 `public/dev-console.html`을 새로 작성해줘. 모바일 우선 + 색상 토큰 적용 + supabase-js로 실시간 구독 + 모든 흐름(주민용 7단계 신청, 이장님 전화신청/합치기/한도확인 등) 포함."
+> "`docs/HANDOFF.md`의 11번(테스트 콘솔 요구사항)을 다 담은 `public/dev-console.html`을 새로 작성해줘. 모바일 우선 + 색상 토큰 적용 + supabase-js로 실시간 구독 + 모든 흐름(주민용 7단계 신청, 기사님 전화신청/합치기/한도확인 등) 포함."

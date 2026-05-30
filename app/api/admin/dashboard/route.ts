@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     if (r.status === "confirmed") confirmedPersons += r.persons;
   }
 
-  // 오늘 이후(미래 포함) 대기 건수 — 이장님이 처리해야 할 총량
+  // 오늘 이후(미래 포함) 대기 건수 — 기사님이 처리해야 할 총량
   const pendingRes = await db
     .from("reservations")
     .select("id", { count: "exact", head: true })

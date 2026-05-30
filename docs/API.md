@@ -274,7 +274,7 @@ SMS 발송이 연결되면 전화번호 OTP 로그인도 가능합니다 (아래
 ### 12. PATCH `/api/reservations/:id/cancel`  🔒
 본인 예약 취소. **운행 시작 시각 이후엔 취소 불가.**
 
-알림: 취소가 처리되면 **본인에게** 확인 알림이 가고, 만약 그 예약이 **확정 상태였다면 이장님에게도** 별도 알림이 갑니다. (현재 스텁)
+알림: 취소가 처리되면 **본인에게** 확인 알림이 가고, 만약 그 예약이 **확정 상태였다면 기사님에게도** 별도 알림이 갑니다. (현재 스텁)
 
 **응답 200**
 ```json
@@ -292,20 +292,20 @@ SMS 발송이 연결되면 전화번호 OTP 로그인도 가능합니다 (아래
 ## 📨 알림(SMS·카톡) 발송 케이스 한눈에
 | # | 트리거 | 받는 사람 |
 |---|---|---|
-| 1 | 이장님 **확정** | 주민 |
-| 2 | 이장님 **취소** (사유) | 주민 |
+| 1 | 기사님 **확정** | 주민 |
+| 2 | 기사님 **취소** (사유) | 주민 |
 | 3 | 주민이 **(대기/확정) 본인 취소** | 주민 (확인) |
-| 4 | 주민이 **확정** 본인 취소 | 이장님 (case 3과 둘 다 발송) |
+| 4 | 주민이 **확정** 본인 취소 | 기사님 (case 3과 둘 다 발송) |
 
 현재는 모두 서버 로그로 대체된 스텁이며, Phase 8(카카오 채널 연결)에서 실제 발송됩니다.
 
 ---
 
-## 📡 실시간 동기화 (Realtime, 주민용·이장님용 둘 다)
+## 📡 실시간 동기화 (Realtime, 주민용·기사님용 둘 다)
 
 **양방향 자동** — RLS 덕분에:
-- 주민 신청/취소 → 이장님 앱에 즉시 푸시
-- 이장님 확정/취소 → **해당 주민** 앱에 즉시 푸시
+- 주민 신청/취소 → 기사님 앱에 즉시 푸시
+- 기사님 확정/취소 → **해당 주민** 앱에 즉시 푸시
 - 운행횟수·잔여횟수 같은 "계산값"은 변경 이벤트가 오면 프론트가 해당 GET 엔드포인트(`/api/stats/village`, `/api/runs/today`, `/api/availability`)를 다시 호출해서 갱신
 
 별도 API 호출/폴링 없이, supabase-js Realtime 채널을 한 번만 구독하면 됩니다:
@@ -313,7 +313,7 @@ SMS 발송이 연결되면 전화번호 OTP 로그인도 가능합니다 (아래
 ```ts
 import { createClient } from "@supabase/supabase-js";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-await supabase.auth.setSession({ access_token, refresh_token }); // 이장님 토큰
+await supabase.auth.setSession({ access_token, refresh_token }); // 기사님 토큰
 
 supabase
   .channel("reservations-changes")
@@ -325,8 +325,8 @@ supabase
       // payload.new : 변경 후 row,  payload.old : 변경 전 row
 
       // 1) 목록 화면 갱신 (대기/확정/취소 등으로 분류)
-      //    INSERT status=waiting → 이장님 "대기" 섹션에 추가
-      //    UPDATE status=confirmed → 주민/이장님 모두 "확정"으로 이동
+      //    INSERT status=waiting → 기사님 "대기" 섹션에 추가
+      //    UPDATE status=confirmed → 주민/기사님 모두 "확정"으로 이동
       //    UPDATE status=cancelled → 목록에서 빼거나 취소 표시
 
       // 2) 계산값(운행수/잔여횟수/마을현황) 즉시 갱신
@@ -340,8 +340,8 @@ supabase
 ```
 
 - **RLS가 그대로 적용**됩니다:
-  - 이장님(role=admin)은 마을 전체 변경 수신 → 주민 신청·취소가 실시간으로 보임
-  - 주민은 본인 예약 변경만 수신 → 이장님 확정·취소가 본인 화면에 실시간으로 반영
+  - 기사님(role=admin)은 마을 전체 변경 수신 → 주민 신청·취소가 실시간으로 보임
+  - 주민은 본인 예약 변경만 수신 → 기사님 확정·취소가 본인 화면에 실시간으로 반영
 - 토큰이 만료되거나 로그아웃 시 `supabase.removeChannel(channel)` 로 해제 권장
 
 ---
@@ -386,7 +386,7 @@ supabase
 
 ---
 
-## 이장님(관리자)용 🔒(admin)
+## 기사님(관리자)용 🔒(admin)
 모든 관리자 API는 `role='admin'` 인 계정의 토큰이 필요합니다. (아니면 403)
 
 ### 15. GET `/api/admin/dashboard`
@@ -400,8 +400,8 @@ supabase
 - `monthly_confirmed` — 그 사람의 **이번 달 확정 탑승 횟수**(회원=계정, 전화예약=전화번호로 집계) ← item6
 - `departure`/`arrival`, `time_label`, `vehicle_code`, `cancel_reason`, `confirmed_at`, `cancelled_at`
 
-### 16-b. POST `/api/admin/reservations`  (전화예약, 이장님 대신 신청)
-이장님이 전화로 받은 신청을 **이름+연락처**로 대신 입력. 주민 정보는 **저장하지 않음**(매번 입력). 차량 자동배정·마감 규칙은 주민 신청과 동일.
+### 16-b. POST `/api/admin/reservations`  (전화예약, 기사님 대신 신청)
+기사님이 전화로 받은 신청을 **이름+연락처**로 대신 입력. 주민 정보는 **저장하지 않음**(매번 입력). 차량 자동배정·마감 규칙은 주민 신청과 동일.
 
 **요청**
 ```json

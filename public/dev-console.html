@@ -153,7 +153,7 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
 .res-route{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;}
 .res-detail{font-size:14px;color:var(--text-muted);line-height:1.6;}
 
-/* ====== 이장님 ====== */
+/* ====== 기사님 ====== */
 .home-header-admin{background:var(--yellow);padding:clamp(28px,8vw,36px) clamp(16px,5vw,22px) clamp(14px,4vw,18px);flex-shrink:0;color:#fff;}
 .cta{width:100%;padding:14px;background:var(--yellow);color:#fff;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:900;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;box-shadow:0 4px 14px rgba(245,166,35,0.4);}
 .home-boxes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
@@ -321,7 +321,7 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
   <h1>다람쥐 택시</h1>
   <p>테스트 콘솔 — 역할을 선택하세요</p>
   <button class="btn-primary" onclick="devLogin('resident')">👤 주민(테스트)으로 로그인</button>
-  <button class="btn-outline" onclick="devLogin('admin')">👨‍💼 이장님(테스트)으로 로그인</button>
+  <button class="btn-outline" onclick="devLogin('admin')">👨‍💼 기사님(테스트)으로 로그인</button>
   <div class="login-divider">— 또는 —</div>
   <button class="btn-outline" disabled style="opacity:.5">💬 카카오로 로그인 (비즈채널 셋업 후)</button>
   <p style="margin-top:18px;font-size:12px">카카오는 사업자등록·비즈앱 전환 후 활성화</p>
@@ -527,13 +527,13 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
   <div class="action-bar"><button class="btn-primary" onclick="goTo('home-resident')">← 홈으로</button></div>
 </div>
 
-<!-- ══════════ 이장님 ══════════ -->
+<!-- ══════════ 기사님 ══════════ -->
 
-<!-- 이장님 홈 -->
+<!-- 기사님 홈 -->
 <div class="screen" id="screen-home-admin">
   <div class="home-header-admin">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div style="font-size:26px;">🐿️</div><span style="font-size:18px;font-weight:900;">다람쥐택시</span></div>
-    <div style="font-size:20px;font-weight:800;margin-bottom:2px;">이장님 안녕하세요!</div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:2px;">기사님 안녕하세요!</div>
     <div style="font-size:13px;color:rgba(255,255,255,.8);font-weight:500;" id="ahome-date"></div>
   </div>
   <div class="scroller">
@@ -565,7 +565,7 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
   <div class="bottom-bar"><button class="btn-home" onclick="exitEdit();goTo('home-admin')">🏠 홈으로</button></div>
 </div>
 
-<!-- 이장님 오늘 운행 -->
+<!-- 기사님 오늘 운행 -->
 <div class="screen" id="screen-today-run-admin">
   <div class="plain-header">📅 오늘 운행</div>
   <div class="scroller"><div id="atoday-list" style="padding:4px 0 16px;"></div></div>
@@ -785,8 +785,8 @@ window.devLogin=async function(role){
   if(ROLE==='admin'){goTo('home-admin');}
   else if(me.json?.needsOnboarding){showOnly('screen-onboard');}
   else{goTo('home-resident');}
-  $('mode-tag').textContent=ROLE==='admin'?'테스트: 이장님':'테스트: 주민';
-  toast('✅ '+(ROLE==='admin'?'이장님':'주민')+' 로그인 완료');
+  $('mode-tag').textContent=ROLE==='admin'?'테스트: 기사님':'테스트: 주민';
+  toast('✅ '+(ROLE==='admin'?'기사님':'주민')+' 로그인 완료');
 };
 window.logout=function(){
   TOKEN=null;ROLE=null;ME=null;
@@ -931,7 +931,7 @@ window.submitBooking=async function(){
       '<div class="summary-row">📅 '+fmtDate(booking.date)+' '+(slot?.label||'')+'</div>'+
       '<div class="summary-row">🚩 '+dep?.name+' → '+arr?.name+'</div>'+
       '<div class="summary-row">👥 '+booking.persons+'명</div>'+
-      '<div class="summary-row">⏳ 대기 상태 — 이장님 확정을 기다려주세요</div>';
+      '<div class="summary-row">⏳ 대기 상태 — 기사님 확정을 기다려주세요</div>';
     $('success-screen').classList.add('show');
   } else {
     toast(r.json?.error||'예약 실패');
@@ -984,7 +984,7 @@ window.cancelMyRes=async function(id){
   renderMyReservations();
 };
 
-// ─── 이장님 홈 ───
+// ─── 기사님 홈 ───
 async function refreshAdminHome(){
   const today=todayStr();
   const d=new Date(today);
@@ -993,7 +993,7 @@ async function refreshAdminHome(){
   const j=dash.json;
   if(j){
     $('ahome-remain').textContent=j.limits?.daily?.remaining??'—';
-    // 대기 신청은 오늘 이후 전체 미처리 건수 (이장님이 처리해야 할 총량)
+    // 대기 신청은 오늘 이후 전체 미처리 건수 (기사님이 처리해야 할 총량)
     $('ahome-wait').textContent=j.pending_total??j.today?.waiting??'—';
     $('ahome-wait2').textContent=j.pending_total??j.today?.waiting??'—';
     $('ahome-today-sub').textContent='오늘 확정 '+(j.today?.confirmed||0)+'건';
@@ -1082,7 +1082,7 @@ window.doMerge=async function(){
 };
 window.closeM=function(id){$(id).classList.remove('on');};
 
-// ─── 이장님 오늘 운행 ───
+// ─── 기사님 오늘 운행 ───
 async function renderTodayRunAdmin(){
   const r=await api('/api/runs/today');
   const runs=r.json?.runs||[];
