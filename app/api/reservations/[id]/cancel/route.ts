@@ -76,8 +76,10 @@ export async function PATCH(
       residentPhone: prof?.phone ?? "",
       date: existing.reservation_date,
       hour: existing.hour,
+      minute: existing.departure_minute,
       departureName: nameOf(existing.departure_location_id),
       arrivalName: nameOf(existing.arrival_location_id),
+      userId: auth.user.id, // 푸시 발송용
     };
 
     // case 3: 항상 본인에게 취소 확인

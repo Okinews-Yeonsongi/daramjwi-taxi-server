@@ -62,6 +62,7 @@ export async function loadNotifyParties(
     date: r.reservation_date,
     hour: r.hour,
     minute: r.departure_minute, // 합치기로 분 조정된 경우 반영
+    userId: r.user_id ?? undefined, // 푸시 발송용 (전화예약은 푸시 대상 X)
   };
 }
 

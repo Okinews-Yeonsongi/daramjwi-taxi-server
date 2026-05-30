@@ -33,6 +33,9 @@ export interface Database {
           name: string;
           role: UserRole;
           status: UserStatus;
+          kakao_id: string | null;
+          kakao_nickname: string | null;
+          kakao_profile_image: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -42,6 +45,9 @@ export interface Database {
           name: string;
           role?: UserRole;
           status?: UserStatus;
+          kakao_id?: string | null;
+          kakao_nickname?: string | null;
+          kakao_profile_image?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -51,8 +57,44 @@ export interface Database {
           name?: string;
           role?: UserRole;
           status?: UserStatus;
+          kakao_id?: string | null;
+          kakao_nickname?: string | null;
+          kakao_profile_image?: string | null;
           created_at?: string;
           updated_at?: string;
+        };
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: {
+          id: number;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent: string | null;
+          created_at: string;
+          last_used_at: string | null;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+          created_at?: string;
+          last_used_at?: string | null;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          endpoint?: string;
+          p256dh?: string;
+          auth?: string;
+          user_agent?: string | null;
+          created_at?: string;
+          last_used_at?: string | null;
         };
         Relationships: [];
       };

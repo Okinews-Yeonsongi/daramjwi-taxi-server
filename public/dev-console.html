@@ -323,7 +323,7 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
   <button class="btn-primary" onclick="devLogin('resident')">👤 주민(테스트)으로 로그인</button>
   <button class="btn-outline" onclick="devLogin('admin')">👨‍💼 기사님(테스트)으로 로그인</button>
   <div class="login-divider">— 또는 —</div>
-  <button class="btn-outline" disabled style="opacity:.5">💬 카카오로 로그인 (비즈채널 셋업 후)</button>
+  <button class="btn-outline" style="background:#fee500;color:#000;border-color:#fee500;font-weight:700;" onclick="kakaoLogin()">💬 카카오로 시작하기</button>
   <p style="margin-top:18px;font-size:12px">카카오는 사업자등록·비즈앱 전환 후 활성화</p>
 </div>
 
@@ -758,11 +758,88 @@ function renderStepBar(curStep,id){
 
 // ─── 초기화 ───
 async function init(){
-  setTimeout(()=>{const sp=$('screen-splash');sp.style.transition='opacity .4s';sp.style.opacity='0';setTimeout(()=>{sp.style.display='none';showOnly('screen-login');},400);},1200);
+  // URL fragment에 카카오 callback에서 받은 토큰이 있는지 먼저 확인
+  const frag=new URLSearchParams((location.hash||'').replace(/^#/,''));
+  const tokenFromKakao=frag.get('access_token');
+  const needsOnb=frag.get('needsOnboarding')==='1';
+
+  setTimeout(async ()=>{
+    const sp=$('screen-splash');sp.style.transition='opacity .4s';sp.style.opacity='0';
+    setTimeout(async ()=>{
+      sp.style.display='none';
+      if(tokenFromKakao){
+        // 카카오 로그인 결과 처리
+        history.replaceState(null,'',location.pathname+location.search); // hash 제거
+        await completeLoginWithToken(tokenFromKakao,needsOnb);
+      } else {
+        showOnly('screen-login');
+      }
+    },400);
+  },1200);
   try{
     const cfg=await(await fetch('/api/dev/config')).json();
     if(cfg.supabaseUrl) supabase=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
   }catch(e){log('supabase 초기화 실패',e);}
+}
+
+// ─── 카카오 로그인 ───
+window.kakaoLogin=function(){
+  const next=encodeURIComponent(location.pathname); // 같은 페이지로 돌아옴
+  location.href='/api/auth/kakao/start?next='+next;
+};
+
+// 카카오 콜백에서 받은 토큰으로 로그인 마무리
+async function completeLoginWithToken(token, needsOnb){
+  TOKEN=token;
+  if(supabase&&supabase.realtime&&supabase.realtime.setAuth){try{supabase.realtime.setAuth(TOKEN);}catch(e){log('setAuth 실패',e);}}
+  const loc=await api('/api/locations'); LOCATIONS=loc.json?.locations||[];
+  const ts=await api('/api/time-slots'); SLOTS=ts.json?.timeSlots||[];
+  const me=await api('/api/auth/me');
+  ME=me.json;
+  ROLE=me.json?.profile?.role||'resident';
+  setupRealtime();
+  // 푸시 권한 요청 (반복하지 않도록 첫 로그인 또는 미요청 상태면)
+  try{await registerPushIfPossible();}catch(e){log('push 설정 실패',e);}
+  if(needsOnb||me.json?.needsOnboarding){
+    // 온보딩: 카카오 닉네임은 이미 있고 전화번호만 받음
+    if(me.json?.profile?.name)$('ob_name').value=me.json.profile.name;
+    showOnly('screen-onboard');
+    return;
+  }
+  if(ROLE==='admin'){goTo('home-admin');}else{goTo('home-resident');}
+  $('mode-tag').textContent=ROLE==='admin'?'기사님':'주민';
+  toast('✅ 카카오 로그인 완료');
+}
+
+// ─── 웹 푸시 등록 ───
+async function registerPushIfPossible(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)){log('푸시 미지원 브라우저');return;}
+  const reg=await navigator.serviceWorker.register('/sw.js');
+  await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub){
+    // 권한 요청
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){log('알림 권한 거부됨');return;}
+    const r=await fetch('/api/push/public-key').then(r=>r.json());
+    if(!r.publicKey){log('VAPID 공개키 없음');return;}
+    sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(r.publicKey)});
+  }
+  // 서버에 저장 (멱등)
+  const sj=sub.toJSON();
+  await api('/api/push/subscribe',{method:'POST',body:{
+    endpoint:sj.endpoint,
+    keys:{p256dh:sj.keys.p256dh,auth:sj.keys.auth},
+    user_agent:navigator.userAgent.slice(0,200)
+  }});
+  log('푸시 구독 완료');
+}
+function urlBase64ToUint8Array(base64){
+  const padding='='.repeat((4-base64.length%4)%4);
+  const b64=(base64+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(b64);const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++)arr[i]=raw.charCodeAt(i);
+  return arr;
 }
 
 // ─── 로그인 ───
