@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>🐿️ 다람쥐 택시 — 테스트 콘솔</title>
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#f59e0b">
+<link rel="icon" href="/icon-192.png">
+<!-- iOS PWA (홈 화면 추가 시 풀스크린 + 웹 푸시 가능) -->
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="다람쥐택시">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -684,6 +693,19 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- iOS 홈 화면 추가 안내 (Safari + 비-PWA 모드에서만 자동 표시) -->
+<div id="ios-install-banner" style="display:none;position:fixed;left:50%;bottom:20px;transform:translateX(-50%);max-width:340px;width:calc(100vw - 30px);background:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:9999;font-size:14px;line-height:1.5;border:1px solid rgba(0,0,0,.08);">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+    <div>
+      <div style="font-weight:700;font-size:15px;margin-bottom:6px;">📱 홈 화면에 추가하기</div>
+      <div style="color:#555;">아이폰은 <strong>홈 화면에 추가</strong>한 다음 그 아이콘으로 실행해야 알림을 받을 수 있어요.</div>
+      <div style="margin-top:8px;color:#666;font-size:13px;">하단 <strong>공유 버튼 (⬆️)</strong> → <strong>홈 화면에 추가</strong></div>
+    </div>
+    <button onclick="document.getElementById('ios-install-banner').style.display='none'" style="background:none;border:0;font-size:20px;color:#999;cursor:pointer;padding:0;">×</button>
+  </div>
+</div>
+
 </div>
 
 <script type="module">
@@ -811,9 +833,24 @@ async function completeLoginWithToken(token, needsOnb){
   toast('✅ 카카오 로그인 완료');
 }
 
+// ─── iOS 감지 + 홈 화면 추가 안내 ───
+function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;}
+function isInStandaloneMode(){return ('standalone' in navigator) && navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;}
+function showIosInstallBannerIfNeeded(){
+  if(isIOS() && !isInStandaloneMode()){
+    document.getElementById('ios-install-banner').style.display='block';
+  }
+}
+
 // ─── 웹 푸시 등록 ───
 async function registerPushIfPossible(){
   if(!('serviceWorker' in navigator) || !('PushManager' in window)){log('푸시 미지원 브라우저');return;}
+  // iOS는 홈 화면 추가(PWA) 모드에서만 푸시 가능
+  if(isIOS() && !isInStandaloneMode()){
+    log('iOS는 홈 화면 추가 후 그 아이콘으로 실행해야 알림 받음');
+    showIosInstallBannerIfNeeded();
+    return;
+  }
   const reg=await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
