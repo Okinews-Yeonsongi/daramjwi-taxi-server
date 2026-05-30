@@ -521,6 +521,7 @@ node --env-file=.env.local scripts/test-item56.mjs   # 위치 추적
 | **SMS OTP 발신** | 미연동 | Solapi 또는 CoolSMS 계정 + 연동 |
 | **카카오 로그인** | Supabase + 개인 카카오 앱은 KOE205 (account_email 필수) 막힘 | 카카오 비즈앱 (사업자등록증) 필요 — 일단은 SMS로만 |
 | **알림톡** | stub | 카카오 비즈채널 + 알림톡 템플릿 승인 필요 |
+| **개발용 로그인 (`ENABLE_DEV_LOGIN=true`)** | 켜져 있음 — `/api/dev/login`으로 토큰 즉시 발급 가능 | **운영 오픈 전 반드시 Vercel 환경변수에서 제거.** 백도어가 됨. |
 | **공공일정 동기화** | 없음 | 사용자가 별도 요청 시 추가 |
 | **운영 모니터링** | Vercel 기본 로그만 | Sentry 등 추가 권장 |
 
