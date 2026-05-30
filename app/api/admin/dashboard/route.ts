@@ -29,6 +29,14 @@ export async function GET(request: Request) {
     if (r.status === "confirmed") confirmedPersons += r.persons;
   }
 
+  // 오늘 이후(미래 포함) 대기 건수 — 이장님이 처리해야 할 총량
+  const pendingRes = await db
+    .from("reservations")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "waiting")
+    .gte("reservation_date", today);
+  const pendingTotal = pendingRes.count ?? 0;
+
   // 한도는 "운행 횟수" 기준 (합승 1회)
   let dailyRuns = 0;
   let monthlyRuns = 0;
@@ -45,7 +53,8 @@ export async function GET(request: Request) {
   return json({
     date: today,
     fare: FARE_WON,
-    today: { ...counts, confirmed_persons: confirmedPersons }, // 예약 건수 기준
+    today: { ...counts, confirmed_persons: confirmedPersons }, // 오늘 예약 건수 기준
+    pending_total: pendingTotal, // 오늘 이후 모든 미처리 대기 건수
     limits: {
       daily: { used: dailyRuns, limit: DAILY_LIMIT, remaining: Math.max(0, DAILY_LIMIT - dailyRuns) },
       monthly: { used: monthlyRuns, limit: MONTHLY_LIMIT, remaining: Math.max(0, MONTHLY_LIMIT - monthlyRuns) },

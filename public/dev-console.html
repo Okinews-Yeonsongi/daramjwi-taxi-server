@@ -993,8 +993,9 @@ async function refreshAdminHome(){
   const j=dash.json;
   if(j){
     $('ahome-remain').textContent=j.limits?.daily?.remaining??'—';
-    $('ahome-wait').textContent=j.today?.waiting??'—';
-    $('ahome-wait2').textContent=j.today?.waiting??'—';
+    // 대기 신청은 오늘 이후 전체 미처리 건수 (이장님이 처리해야 할 총량)
+    $('ahome-wait').textContent=j.pending_total??j.today?.waiting??'—';
+    $('ahome-wait2').textContent=j.pending_total??j.today?.waiting??'—';
     $('ahome-today-sub').textContent='오늘 확정 '+(j.today?.confirmed||0)+'건';
   }
 }
