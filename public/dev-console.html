@@ -1,282 +1,1215 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>🐿️ 다람쥐 택시 — 백엔드 테스트 콘솔</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐿️ 다람쥐 택시 — 테스트 콘솔</title>
 <style>
-  :root { --p:#E8960A; --pl:#FEF3DC; --bg:#F4F2ED; --card:#fff; --green:#1E8A56; --red:#CC3030; --kakao:#FEE500; }
-  * { box-sizing: border-box; }
-  body { font-family: system-ui, sans-serif; margin:0; background:var(--bg); color:#111; }
-  header { background:var(--p); color:#fff; padding:14px 18px; font-weight:800; font-size:18px; position:sticky; top:0; z-index:5; }
-  .wrap { display:grid; grid-template-columns: 1fr 1fr; gap:14px; padding:16px; }
-  @media (max-width: 900px){ .wrap{ grid-template-columns:1fr; } }
-  .card { background:var(--card); border-radius:16px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,.08); }
-  .card h2 { margin:0 0 10px; font-size:15px; }
-  button { background:var(--p); color:#fff; border:0; border-radius:10px; padding:9px 12px; font-weight:700; font-size:14px; cursor:pointer; margin:3px 3px 3px 0; }
-  button.alt { background:#555; }
-  button.green { background:var(--green); }
-  button.red { background:var(--red); }
-  button.kakao { background:var(--kakao); color:#3c1e1e; }
-  input, select { padding:8px; border:1px solid #ccc; border-radius:8px; font-size:14px; margin:3px 0; }
-  label { font-size:13px; color:#555; display:inline-block; min-width:60px; }
-  #status { padding:8px 12px; background:var(--pl); border-radius:10px; font-size:13px; margin:8px 0; }
-  #out { background:#1e1e1e; color:#d4d4d4; padding:12px; border-radius:12px; font-size:12px; white-space:pre-wrap; word-break:break-all; max-height:60vh; overflow:auto; }
-  .row { margin:6px 0; }
-  .list .item { border:1px solid #eee; border-radius:10px; padding:8px 10px; margin:6px 0; font-size:13px; }
-  .muted { color:#888; font-size:12px; }
-  .tag { display:inline-block; padding:1px 7px; border-radius:8px; font-size:11px; font-weight:700; }
-  .tag.waiting{background:#eee;} .tag.confirmed{background:var(--green);color:#fff;} .tag.cancelled{background:var(--red);color:#fff;} .tag.completed{background:#999;color:#fff;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#E8960A;--primary-light:#FEF3DC;--primary-dark:#B87208;--primary-darker:#7A4C04;
+  --bg:#F4F2ED;--card:#fff;--text:#111008;--text-muted:#666;--text-hint:#AAA;
+  --border:rgba(0,0,0,0.10);--border-med:rgba(0,0,0,0.16);
+  --green:#1E8A56;--green-light:#DDF4EA;--green-dark:#0F5A34;
+  --red:#CC3030;--red-light:#FDEAEA;
+  --blue:#1A6EC4;--blue-light:#DEEDFB;--purple:#6A4E9A;--purple-light:#EDE6F8;
+  --shadow-sm:0 2px 10px rgba(0,0,0,0.07);
+  --radius-sm:14px;--radius:20px;--radius-lg:26px;
+  --yellow:#F5A623;
+}
+html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;display:flex;align-items:center;justify-content:center;}
+.phone-shell{width:min(400px,100vw);height:min(860px,100dvh);background:var(--bg);border-radius:clamp(0px,5vw,48px);overflow:hidden;position:relative;box-shadow:0 0 0 9px #111008,0 36px 90px rgba(0,0,0,0.65);display:flex;flex-direction:column;}
+@media(max-width:420px){.phone-shell{border-radius:0;box-shadow:none;width:100vw;height:100dvh;}html,body{background:var(--bg);}}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:110px;height:28px;background:#111008;border-radius:0 0 16px 16px;z-index:999;}
+@media(max-width:420px){.notch{display:none;}}
+#mode-tag{position:absolute;top:6px;left:8px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;font-weight:700;padding:3px 7px;border-radius:6px;z-index:998;}
+
+/* 공용 */
+.screen{display:none;flex-direction:column;height:100%;overflow:hidden;}
+.screen.active{display:flex;}
+.scroller{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.scroller::-webkit-scrollbar{display:none;}
+.toast{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:#1C1A14;color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90%;}
+.toast.on{opacity:1;}
+.empty{padding:36px 16px;text-align:center;color:var(--text-hint);font-size:14px;}
+
+/* 헤더 */
+.top-bar{background:var(--primary);padding:clamp(28px,8vw,36px) clamp(16px,5vw,22px) clamp(14px,4vw,18px);flex-shrink:0;}
+.app-name{font-size:22px;font-weight:900;color:#fff;}
+.top-bar-sub{font-size:16px;color:rgba(255,255,255,.9);font-weight:700;margin-top:4px;}
+.top-bar-date{font-size:14px;color:rgba(255,255,255,.75);margin-top:2px;font-weight:500;}
+.home-notice{background:rgba(255,255,255,0.2);border-radius:12px;padding:12px 14px;margin-top:14px;display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:15px;}
+.header-back{background:#fff;padding:clamp(26px,7vw,32px) 16px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.back-btn{width:48px;height:48px;border-radius:50%;border:2px solid var(--border-med);background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;flex-shrink:0;}
+.back-btn:active{background:#E0DDD8;}
+.header-title{font-size:20px;font-weight:800;color:var(--text);}
+.plain-header{background:#fff;padding:clamp(26px,7vw,32px) 16px 14px;border-bottom:1px solid var(--border);flex-shrink:0;font-size:18px;font-weight:900;color:var(--text);}
+
+/* step bar (주민용) */
+.step-bar{background:#fff;padding:12px 16px 8px;display:flex;align-items:flex-start;border-bottom:1px solid var(--border);flex-shrink:0;}
+.step-wrap{display:flex;flex-direction:column;align-items:center;}
+.step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:#E0E0E0;color:#999;flex-shrink:0;}
+.step-dot.done{background:var(--primary);color:#fff;}
+.step-dot.current{background:var(--primary);color:#fff;box-shadow:0 0 0 4px var(--primary-light);}
+.step-line{flex:1;height:3px;background:#E0E0E0;margin-top:14px;}
+.step-line.done{background:var(--primary);}
+.step-label{font-size:11px;font-weight:700;color:#BBB;margin-top:4px;}
+
+.content-pad{padding:18px 16px 110px;}
+.section-big{font-size:22px;font-weight:900;color:var(--text);margin-bottom:18px;line-height:1.3;}
+.section-sm{font-size:16px;font-weight:800;color:var(--text-muted);margin-bottom:10px;}
+.card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:18px;margin-bottom:12px;box-shadow:var(--shadow-sm);}
+.card-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:14px;}
+
+.action-bar{position:absolute;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--border);padding:12px 16px 28px;}
+.btn-primary{width:100%;padding:18px;border-radius:16px;border:none;background:var(--primary);font-size:18px;font-weight:800;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;}
+.btn-primary:active{opacity:.9;transform:scale(.98);}
+.btn-primary:disabled{background:#D8D8D8;color:#999;cursor:default;transform:none;}
+.btn-outline{width:100%;padding:18px;border-radius:16px;border:2px solid var(--border-med);background:#fff;font-size:18px;font-weight:800;color:var(--text);cursor:pointer;font-family:inherit;}
+.btn-outline:active{background:var(--bg);}
+
+/* 홈 (주민) */
+.home-grid{display:flex;flex-direction:column;gap:10px;padding:16px;}
+.home-btn{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:20px 18px;display:flex;align-items:center;gap:16px;cursor:pointer;text-align:left;box-shadow:var(--shadow-sm);width:100%;font-family:inherit;}
+.home-btn:active{opacity:.85;}
+.home-btn-icon{width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;}
+.home-btn-label{font-size:20px;font-weight:800;color:var(--text);line-height:1.3;}
+.home-btn-sub{font-size:14px;color:var(--text-muted);margin-top:3px;}
+
+/* 날짜 카드 */
+.date-list{display:flex;flex-direction:column;gap:10px;}
+.date-card{background:#fff;border-radius:var(--radius);border:3px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:18px;cursor:pointer;box-shadow:var(--shadow-sm);transition:all .15s;}
+.date-card.selected{background:var(--primary);border-color:var(--primary);box-shadow:0 6px 18px rgba(232,150,10,0.4);}
+.date-card.selected .dc-dow,.date-card.selected .dc-num,.date-card.selected .dc-full{color:#fff !important;}
+.date-card.weekend .dc-dow,.date-card.weekend .dc-num{color:var(--red);}
+.dc-left{display:flex;flex-direction:column;align-items:center;min-width:68px;}
+.dc-dow{font-size:18px;font-weight:900;color:var(--text-muted);line-height:1;}
+.dc-num{font-size:50px;font-weight:900;color:var(--text);line-height:1;letter-spacing:-2px;}
+.dc-right{flex:1;}
+.dc-full{font-size:18px;font-weight:700;color:var(--text);}
+.dc-today-badge{display:inline-block;background:var(--primary);color:#fff;font-size:12px;font-weight:800;padding:3px 10px;border-radius:18px;margin-bottom:4px;}
+.dc-check{font-size:24px;color:#fff;opacity:0;}
+.date-card.selected .dc-check{opacity:1;}
+
+/* 시간 카드 */
+.time-list{display:flex;flex-direction:column;gap:8px;}
+.time-btn{padding:18px 20px;border-radius:var(--radius-sm);border:3px solid var(--border);background:#fff;font-size:20px;font-weight:800;color:var(--text);cursor:pointer;font-family:inherit;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;transition:all .15s;width:100%;}
+.time-btn.selected{background:var(--primary);border-color:var(--primary);color:#fff;}
+.time-btn .t-check{font-size:20px;opacity:0;}
+.time-btn.selected .t-check{opacity:1;}
+.time-btn.time-full{background:#F7F7F7;border-color:#E8E8E8;color:#BBB;cursor:default;}
+.time-btn.time-past{background:#F0F0F0;border-color:#E0E0E0;color:#AAA;cursor:default;}
+
+/* 인원 */
+.person-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.person-pick-btn{background:#fff;border-radius:var(--radius);border:3px solid var(--border);padding:22px 12px 18px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;box-shadow:var(--shadow-sm);font-family:inherit;}
+.person-pick-btn.selected{background:var(--primary-light);border-color:var(--primary);}
+.person-pick-btn.disabled{opacity:.35;cursor:default;pointer-events:none;}
+.ppb-num{font-size:28px;font-weight:900;color:var(--text);}
+.person-pick-btn.selected .ppb-num{color:var(--primary-darker);}
+.ppb-icons{font-size:22px;}
+.remain-notice{background:var(--red-light);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:15px;font-weight:700;color:var(--red);}
+
+/* 출발·도착 */
+.loc-cat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.loc-cat-btn{padding:20px 12px;border-radius:var(--radius-sm);border:3px solid var(--border);background:#fff;font-size:18px;font-weight:800;color:var(--text);cursor:pointer;font-family:inherit;box-shadow:var(--shadow-sm);}
+.loc-cat-btn.selected{background:var(--primary-light);border-color:var(--primary);color:var(--primary-darker);}
+.loc-options{display:flex;flex-direction:column;gap:8px;}
+.loc-opt-btn{padding:18px;border-radius:var(--radius-sm);border:3px solid var(--border);background:#fff;font-size:18px;font-weight:700;color:var(--text);cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;font-family:inherit;box-shadow:var(--shadow-sm);}
+.loc-opt-btn.selected{background:var(--primary-light);border-color:var(--primary);color:var(--primary-darker);}
+.loc-icon{font-size:26px;}
+.loc-check{font-size:20px;color:var(--primary);opacity:0;margin-left:auto;}
+.loc-opt-btn.selected .loc-check{opacity:1;}
+.auto-arrive-box{background:var(--green-light);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:14px;color:var(--green-dark);font-weight:700;font-size:15px;}
+
+/* 마을 현황 */
+.vstat-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:20px 22px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-sm);}
+.vstat-label{font-size:17px;font-weight:700;color:var(--text-muted);}
+.vstat-val{font-size:38px;font-weight:900;color:var(--primary);line-height:1;}
+.vstat-val.g{color:var(--green);}
+.vstat-unit{font-size:18px;font-weight:700;}
+
+/* 오늘 운행 (주민) */
+.run-hero{background:var(--primary);padding:18px 20px 22px;border-radius:0 0 var(--radius-lg) var(--radius-lg);margin-bottom:12px;color:#fff;}
+.run-hero-status{font-size:24px;font-weight:900;}
+.run-hero-date{font-size:16px;color:rgba(255,255,255,.85);margin-top:5px;font-weight:600;}
+.run-item{display:flex;align-items:center;gap:14px;padding:18px 0;border-bottom:1px solid var(--border);}
+.run-item:last-child{border-bottom:none;}
+.run-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;}
+.run-info{flex:1;}
+.run-time{font-size:20px;font-weight:800;color:var(--text);}
+.run-route{font-size:16px;color:var(--text-muted);margin-top:4px;}
+.run-badge-tag{font-size:13px;font-weight:800;padding:5px 12px;border-radius:14px;}
+
+/* 내 예약 */
+.res-card{background:#fff;border-radius:var(--radius);border:1px solid var(--border);padding:18px;margin-bottom:10px;box-shadow:var(--shadow-sm);}
+.res-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.res-badge{display:inline-block;padding:5px 14px;border-radius:22px;font-size:14px;font-weight:800;}
+.badge-waiting{background:var(--primary-light);color:var(--primary-darker);}
+.badge-confirmed{background:var(--green-light);color:var(--green-dark);}
+.badge-cancelled{background:var(--red-light);color:var(--red);}
+.badge-completed{background:#F0F0F0;color:#888;}
+.res-cancel-btn{background:var(--red-light);color:var(--red);border:none;border-radius:18px;padding:8px 18px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;}
+.res-route{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.res-detail{font-size:14px;color:var(--text-muted);line-height:1.6;}
+
+/* ====== 이장님 ====== */
+.home-header-admin{background:var(--yellow);padding:clamp(28px,8vw,36px) clamp(16px,5vw,22px) clamp(14px,4vw,18px);flex-shrink:0;color:#fff;}
+.cta{width:100%;padding:14px;background:var(--yellow);color:#fff;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:900;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;box-shadow:0 4px 14px rgba(245,166,35,0.4);}
+.home-boxes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.home-box{border-radius:var(--radius-sm);padding:12px 14px;display:flex;flex-direction:column;gap:3px;border:1.5px solid;}
+.home-box-g{background:var(--green-light);border-color:rgba(26,122,74,0.3);}
+.home-box-r{background:var(--red-light);border-color:rgba(196,43,43,0.3);}
+.home-box-label{font-size:11px;font-weight:700;}
+.home-box-g .home-box-label{color:var(--green-dark);}
+.home-box-r .home-box-label{color:var(--red);}
+.home-box-val{font-size:30px;font-weight:900;line-height:1.1;}
+.home-box-g .home-box-val{color:var(--green);}
+.home-box-r .home-box-val{color:var(--red);}
+.home-box-unit{font-size:12px;font-weight:700;}
+.menu-grid{display:flex;flex-direction:column;gap:10px;padding:0 16px 16px;}
+.menu-btn{background:#fff;border:1.5px solid var(--border-med);border-radius:var(--radius);padding:18px;display:flex;align-items:center;gap:14px;cursor:pointer;font-family:inherit;text-align:left;box-shadow:var(--shadow-sm);width:100%;}
+.menu-icon{width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+.menu-icon-r{background:var(--red-light);}
+.menu-icon-b{background:#EEF4FF;}
+.menu-icon-g{background:var(--green-light);}
+.menu-text{flex:1;}
+.menu-title{font-size:18px;font-weight:900;}
+.menu-sub{font-size:13px;color:var(--text-muted);margin-top:2px;}
+.menu-cnt{font-size:24px;font-weight:900;color:var(--red);}
+.menu-arr{font-size:22px;color:var(--text-hint);}
+
+/* 탭 */
+.tabs{display:flex;border-bottom:2px solid var(--border);background:#fff;position:sticky;top:0;z-index:40;}
+.tab{flex:1;padding:11px 4px;text-align:center;font-size:14px;font-weight:700;color:var(--text-muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;}
+.tab.on{color:var(--primary);border-bottom-color:var(--primary);}
+
+.edit-bar{background:#fff;padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+.edit-bar-info{font-size:12px;font-weight:700;color:var(--text-muted);}
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:8px 13px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;white-space:nowrap;}
+.bg2{background:var(--green);color:#fff;}
+.br2{background:var(--red);color:#fff;}
+.bo2{background:#fff;color:var(--text);border:1.5px solid var(--border-med);}
+.by2{background:var(--yellow);color:#fff;}
+.check-circle{width:24px;height:24px;border-radius:50%;border:2px solid var(--border-med);background:#fff;display:inline-flex;align-items:center;justify-content:center;}
+.check-circle.on{background:var(--primary);border-color:var(--primary);}
+.check-circle.on::after{content:'✓';color:#fff;font-size:12px;font-weight:900;}
+
+.wait-card{background:#fff;border-radius:var(--radius);border:1.5px solid var(--border-med);margin:10px 14px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.wait-item{padding:16px;cursor:pointer;}
+.wait-item-sel{background:var(--primary-light);}
+.wi-date-badge{font-size:12px;font-weight:800;color:var(--primary-darker);background:var(--primary-light);display:inline-block;padding:3px 10px;border-radius:8px;margin-bottom:8px;}
+.wi-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+.wi-name{font-size:18px;font-weight:900;}
+.wi-route{font-size:15px;color:var(--text-muted);font-weight:600;line-height:1.5;margin-bottom:8px;}
+.wi-bottom{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.wi-src{font-size:12px;background:#E8F0FE;color:#1A6EC4;padding:3px 9px;border-radius:8px;font-weight:700;}
+.wi-usage{font-size:12px;background:#F0F0F0;color:#666;padding:3px 9px;border-radius:8px;font-weight:700;}
+.wi-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.wi-btn{padding:10px 16px;border-radius:9px;font-size:14px;font-weight:800;cursor:pointer;border:none;font-family:inherit;}
+.wi-btn-g{background:var(--green);color:#fff;}
+.wi-btn-r{background:var(--red);color:#fff;}
+
+.bottom-bar{background:#fff;border-top:1px solid var(--border);padding:12px 16px 20px;flex-shrink:0;}
+.btn-home{width:100%;padding:14px;background:var(--yellow);color:#fff;border:none;border-radius:var(--radius-sm);font-size:16px;font-weight:900;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;}
+
+/* 전화신청 6단계 */
+.ms-wrap{padding:14px 14px 30px;}
+.sth{display:flex;align-items:center;margin-bottom:18px;}
+.sd{width:26px;height:26px;border-radius:50%;background:#E0E0E0;color:#AAA;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sd.on{background:var(--primary);color:#fff;}
+.sd.dn{background:var(--green);color:#fff;}
+.stl{flex:1;height:3px;background:#E0E0E0;}
+.stl.dn{background:var(--green);}
+.ms{display:none;}
+.ms.on{display:block;}
+.mt{font-size:20px;font-weight:900;margin-bottom:4px;}
+.msub{font-size:14px;color:var(--text-muted);margin-bottom:14px;}
+.fi{width:100%;padding:14px 14px;border-radius:12px;border:2px solid var(--border-med);font-size:18px;font-family:inherit;background:#fff;outline:none;margin-bottom:10px;}
+.fi:focus{border-color:var(--primary);}
+.dir-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.dir-btn{padding:20px 10px;border-radius:var(--radius);border:3px solid var(--border);background:#fff;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;gap:6px;align-items:center;box-shadow:var(--shadow-sm);}
+.dir-btn.on{border-color:var(--primary);background:var(--primary);color:#fff;}
+.dir-em{font-size:32px;line-height:1;}
+.dir-label{font-size:16px;font-weight:900;}
+.sf2{display:flex;gap:8px;margin-top:16px;}
+.bb{padding:14px 16px;border-radius:12px;background:#fff;color:var(--text-muted);font-size:15px;font-weight:700;border:2px solid var(--border-med);cursor:pointer;font-family:inherit;}
+.bn{flex:1;padding:14px;border-radius:12px;background:var(--primary);color:#fff;font-size:16px;font-weight:900;border:none;cursor:pointer;font-family:inherit;}
+.sumbox{background:var(--primary-light);border-radius:12px;padding:14px;margin-top:12px;}
+.sum-t{font-size:12px;font-weight:700;color:var(--primary-darker);margin-bottom:8px;}
+.sum-r{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.07);font-size:14px;}
+.sum-r:last-child{border:none;}
+.sum-k{color:var(--primary-darker);}
+.sum-v{font-weight:800;color:var(--primary-darker);}
+
+/* 주간 캘린더 */
+.week-cal{padding:12px;}
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.week-nav-btn{background:none;border:1.5px solid var(--border-med);border-radius:9px;padding:6px 12px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;}
+.week-label{font-size:17px;font-weight:900;}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px;}
+.wday-col{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.wday-h{font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:2px;}
+.wday-cell{width:100%;min-height:60px;border-radius:10px;border:1.5px solid var(--border);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:6px 2px 4px;cursor:pointer;}
+.wday-cell.today{border:2px solid var(--primary);background:var(--primary-light);}
+.wday-cell.sel{background:var(--primary);border-color:var(--primary);}
+.wday-num{font-size:20px;font-weight:900;line-height:1;}
+.wday-cell.sel .wday-num{color:#fff;}
+.wday-cnt{font-size:10px;font-weight:700;color:var(--green);margin-top:2px;}
+.wday-cell.sel .wday-cnt{color:rgba(255,255,255,.85);}
+.week-detail{background:#fff;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;}
+.week-detail-hd{padding:11px 14px;background:var(--primary-light);font-size:13px;font-weight:800;color:var(--primary-darker);}
+
+/* 합치기 모달 */
+.moverlay{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:400;display:none;align-items:flex-end;justify-content:center;}
+.moverlay.on{display:flex;}
+.msheet{background:#fff;border-radius:20px 20px 0 0;padding:16px 16px 28px;width:100%;max-height:90%;overflow-y:auto;animation:su .22s ease;}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhandle{width:36px;height:4px;background:#DDD;border-radius:2px;margin:0 auto 14px;}
+.mtit{font-size:17px;font-weight:900;margin-bottom:3px;}
+.msub2{font-size:13px;color:var(--text-muted);margin-bottom:12px;}
+.mrow{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+.mrow:last-of-type{border:none;}
+.mk{font-size:13px;color:var(--text-muted);}
+.mv{font-size:13px;font-weight:700;}
+.mft{display:flex;gap:8px;margin-top:14px;}
+.mft .btn{flex:1;padding:12px;font-size:14px;}
+.dial-section{margin:14px 0;}
+.dial-row{display:flex;align-items:center;justify-content:center;gap:10px;}
+.dial-colon{font-size:26px;font-weight:900;}
+.dial-col{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.dial-col-label{font-size:11px;font-weight:700;color:var(--text-muted);}
+.dial-arrow-btn{background:var(--primary-light);border:none;border-radius:8px;width:42px;height:34px;font-size:16px;cursor:pointer;color:var(--primary-darker);font-weight:900;}
+.dial-display{width:74px;height:52px;background:#fff;border:2px solid var(--primary);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:var(--primary);}
+.dial-preview{text-align:center;font-size:18px;font-weight:900;color:var(--primary);margin:10px 0 2px;}
+
+.confirm-box{background:var(--bg);border-radius:13px;padding:16px;text-align:center;}
+.confirm-q{font-size:17px;font-weight:900;margin-bottom:6px;}
+.confirm-sub{font-size:13px;color:var(--text-muted);}
+
+/* 성공 화면 */
+.success-screen{display:none;position:absolute;inset:0;background:#fff;z-index:300;flex-direction:column;align-items:center;justify-content:center;padding:30px 22px;text-align:center;}
+.success-screen.show{display:flex;}
+.success-anim{font-size:82px;animation:pop .5s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes pop{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}
+.success-summary{background:var(--bg);border-radius:var(--radius);padding:18px;width:100%;margin:18px 0 22px;text-align:left;}
+.summary-row{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:16px;color:var(--text);font-weight:700;}
+
+/* 로그인 */
+#screen-login{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;padding:30px;height:100%;}
+#screen-login .logo{font-size:80px;}
+#screen-login h1{font-size:26px;font-weight:900;margin:10px 0;}
+#screen-login p{color:var(--text-muted);font-size:14px;text-align:center;margin-bottom:24px;}
+#screen-login button{margin-bottom:10px;}
+.login-divider{font-size:12px;color:var(--text-hint);margin:14px 0;text-align:center;}
 </style>
 </head>
 <body>
-<header>🐿️ 다람쥐 택시 — 백엔드 테스트 콘솔 <span class="muted" style="color:#fff;font-weight:400">(개발용)</span></header>
-<div id="status">로그인 안 됨 — 먼저 아래 [로그인]을 눌러주세요.</div>
+<div class="phone-shell">
+<div class="notch"></div>
+<div id="mode-tag">테스트 콘솔</div>
 
-<div class="wrap">
-  <div class="card">
-    <h2>0. 로그인</h2>
-    <button class="kakao" onclick="kakaoLogin()">💬 카카오로 로그인</button>
-    <div class="muted" style="margin:6px 0">— 또는 빠른 테스트 계정 —</div>
-    <button onclick="devLogin('resident')">주민(테스트)</button>
-    <button class="alt" onclick="devLogin('admin')">이장님(테스트)</button>
+<!-- 스플래시 -->
+<div id="screen-splash" style="position:absolute;inset:0;background:#F5F5F0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;">
+  <div style="width:140px;height:140px;background:#F5A623;border-radius:32px;display:flex;align-items:center;justify-content:center;font-size:80px;box-shadow:0 8px 30px rgba(245,166,35,.4);">🐿️</div>
+  <div style="margin-top:18px;font-size:20px;font-weight:900;color:#3A2A00;">다람쥐 택시</div>
+</div>
+
+<!-- 로그인 -->
+<div class="screen" id="screen-login">
+  <div class="logo">🐿️</div>
+  <h1>다람쥐 택시</h1>
+  <p>테스트 콘솔 — 역할을 선택하세요</p>
+  <button class="btn-primary" onclick="devLogin('resident')">👤 주민(테스트)으로 로그인</button>
+  <button class="btn-outline" onclick="devLogin('admin')">👨‍💼 이장님(테스트)으로 로그인</button>
+  <div class="login-divider">— 또는 —</div>
+  <button class="btn-outline" disabled style="opacity:.5">💬 카카오로 로그인 (비즈채널 셋업 후)</button>
+  <p style="margin-top:18px;font-size:12px">카카오는 사업자등록·비즈앱 전환 후 활성화</p>
+</div>
+
+<!-- 온보딩 (카카오 신규용, 현재는 미사용) -->
+<div class="screen" id="screen-onboard" style="background:#fff;justify-content:space-between;">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px;">
+    <div style="font-size:80px;text-align:center;margin-bottom:14px;">🐿️</div>
+    <h2 style="text-align:center;font-size:24px;font-weight:900;margin-bottom:18px;">가입 정보 입력</h2>
+    <p style="text-align:center;color:var(--text-muted);margin-bottom:20px;font-size:14px;">이름과 전화번호를 입력해주세요</p>
+    <input class="fi" id="ob_name" placeholder="이름" style="font-size:18px;">
+    <input class="fi" id="ob_phone" placeholder="010-0000-0000" type="tel" style="font-size:18px;">
   </div>
-
-  <div class="card" id="onboarding" style="display:none; border:2px solid var(--p)">
-    <h2>📝 가입 정보 입력 (카카오 첫 로그인)</h2>
-    <div class="row"><label>이름</label><input id="ob_name" placeholder="이름" /></div>
-    <div class="row"><label>전화번호</label><input id="ob_phone" placeholder="010-0000-0000" /></div>
-    <button class="green" onclick="submitOnboarding()">가입 완료</button>
-    <div class="muted">전화번호 자동수집(카카오싱크)은 검수 통과 후 적용돼요. 지금은 직접 입력.</div>
+  <div class="action-bar" style="position:relative;">
+    <button class="btn-primary" onclick="submitOnboard()">가입 완료 →</button>
   </div>
+</div>
 
-  <div class="card">
-    <h2>1. 마스터 데이터</h2>
-    <button onclick="call('/api/locations')">장소 목록</button>
-    <button onclick="call('/api/time-slots')">시간 목록</button>
+<!-- ══════════ 주민용 ══════════ -->
+
+<!-- 주민 홈 -->
+<div class="screen" id="screen-home-resident">
+  <div class="top-bar">
+    <div class="app-name">🐿️ 다람쥐 택시</div>
+    <div class="top-bar-sub" id="rhome-greeting">안녕하세요!</div>
+    <div class="top-bar-date" id="rhome-date"></div>
+    <div class="home-notice">📢 오전 9시 ~ 오후 6시 정상 운행</div>
   </div>
-
-  <div class="card">
-    <h2>2. 예약 신청 (주민)</h2>
-    <div class="row"><label>날짜</label><input id="date" type="date" /></div>
-    <div class="row"><label>출발지역</label>
-      <select id="origin"><option value="cheongsanmyeon">청산면</option><option value="eupnae">읍내</option></select>
-      <button onclick="availability()">가용성 조회</button>
+  <div class="scroller">
+    <div class="home-grid">
+      <button class="home-btn" onclick="goTo('booking-date')">
+        <div class="home-btn-icon" style="background:var(--primary-light)">🚗</div>
+        <div><div class="home-btn-label">탑승 신청하기</div><div class="home-btn-sub">날짜·시간·경로 선택</div></div>
+      </button>
+      <button class="home-btn" onclick="goTo('today-run-resident')">
+        <div class="home-btn-icon" style="background:var(--green-light)">📅</div>
+        <div><div class="home-btn-label">오늘 운행</div><div class="home-btn-sub">오늘 운행 일정 확인</div></div>
+      </button>
+      <button class="home-btn" onclick="goTo('village')">
+        <div class="home-btn-icon" style="background:var(--blue-light)">🏘️</div>
+        <div><div class="home-btn-label">마을 현황</div><div class="home-btn-sub">이번 달 이용 현황</div></div>
+      </button>
+      <button class="home-btn" onclick="goTo('my-reservations')">
+        <div class="home-btn-icon" style="background:var(--purple-light)">📋</div>
+        <div><div class="home-btn-label">내 예약 현황</div><div class="home-btn-sub">나의 예약 내역</div></div>
+      </button>
     </div>
-    <hr/>
-    <div class="row"><label>시간</label><select id="hour" style="width:130px"></select>
-      <label>인원</label><input id="persons" type="number" value="2" min="1" max="4" style="width:60px"/></div>
-    <div class="row"><label>출발지</label><select id="dep"></select></div>
-    <div class="row"><label>도착지</label><select id="arr"></select></div>
-    <button class="green" onclick="book()">예약하기</button>
+    <div style="padding:0 16px 24px;"><button class="btn-outline" onclick="logout()" style="font-size:14px;padding:12px;">로그아웃</button></div>
   </div>
+</div>
 
-  <div class="card">
-    <h2>3. 내 예약 / 마을</h2>
-    <button onclick="myReservations()">내 예약 보기</button>
-    <button onclick="call('/api/runs/today')">오늘 운행</button>
-    <button onclick="call('/api/stats/village')">마을 현황</button>
-    <div id="mylist" class="list"></div>
+<!-- 신청 1: 날짜 -->
+<div class="screen" id="screen-booking-date">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('home-resident')">←</button>
+    <span class="header-title">탑승 신청</span>
   </div>
-
-  <div class="card">
-    <h2>4. 이장님 (관리자)</h2>
-    <button onclick="adminWaiting()">대기 예약 보기</button>
-    <button onclick="call('/api/admin/dashboard')">대시보드</button>
-    <button onclick="call('/api/admin/stats')">이번달 통계</button>
-
-    <hr/>
-    <div class="muted">📞 전화신청 (이름·전화 입력 + 위 <b>2번</b> 칸의 날짜/시간/출발/도착/인원 사용)</div>
-    <div class="row"><label>이름</label><input id="g_name" placeholder="홍길동" style="width:110px"/>
-      <label>전화</label><input id="g_phone" placeholder="010-0000-0000" style="width:150px"/></div>
-    <button class="green" onclick="guestBook()">전화신청 등록</button>
-
-    <hr/>
-    <div class="muted">🔀 합치기 (아래 대기 목록에서 2건 이상 체크 → 새 시각 선택 → 합치기)</div>
-    <div class="row"><label>새 시각</label>
-      <select id="merge_hour" style="width:70px"></select>
-      <select id="merge_min" style="width:70px"><option>0</option><option>10</option><option>20</option><option>30</option><option>40</option><option>50</option></select> 분
-      <button class="alt" onclick="mergeSelected()">선택 합치기</button>
+  <div id="stepbar-1"></div>
+  <div class="scroller">
+    <div class="content-pad">
+      <div class="section-big">언제 탑승하실 건가요?</div>
+      <div class="date-list" id="date-list"></div>
     </div>
-    <div id="adminlist" class="list"></div>
   </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="date-next-btn" onclick="goTo('booking-depart')" disabled>다음 — 출발지 선택 →</button>
+  </div>
+</div>
 
-  <div class="card" style="grid-column:1/-1">
-    <h2>📋 결과</h2>
-    <div id="out">여기에 응답이 표시됩니다.</div>
+<!-- 신청 2: 출발지 -->
+<div class="screen" id="screen-booking-depart">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('booking-date')">←</button>
+    <span class="header-title">탑승 신청</span>
   </div>
+  <div id="stepbar-2"></div>
+  <div class="scroller">
+    <div class="content-pad">
+      <div class="section-big">출발지를 선택해주세요</div>
+      <div class="loc-cat-row">
+        <button class="loc-cat-btn" id="depart-cat-c" onclick="selectDepartCat('cheongsanmyeon')">🏡 청산면</button>
+        <button class="loc-cat-btn" id="depart-cat-e" onclick="selectDepartCat('eupnae')">🏘️ 읍내</button>
+      </div>
+      <div class="loc-options" id="depart-options"></div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="depart-next-btn" onclick="goTo('booking-arrive')" disabled>다음 — 도착지 선택 →</button>
+  </div>
+</div>
+
+<!-- 신청 3: 도착지 -->
+<div class="screen" id="screen-booking-arrive">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('booking-depart')">←</button>
+    <span class="header-title">탑승 신청</span>
+  </div>
+  <div id="stepbar-3"></div>
+  <div class="scroller">
+    <div class="content-pad">
+      <div class="section-big">도착지를 선택해주세요</div>
+      <div class="auto-arrive-box" id="auto-arrive-box"><span>✅</span><span id="auto-arrive-text"></span></div>
+      <div class="loc-options" id="arrive-options"></div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="arrive-next-btn" onclick="goTo('booking-time')" disabled>다음 — 시간 선택 →</button>
+  </div>
+</div>
+
+<!-- 신청 4: 시간 -->
+<div class="screen" id="screen-booking-time">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('booking-arrive')">←</button>
+    <span class="header-title">탑승 신청</span>
+  </div>
+  <div id="stepbar-4"></div>
+  <div class="scroller">
+    <div class="content-pad">
+      <div class="section-big">몇 시에 타실 건가요?</div>
+      <div class="section-sm">🌅 오전</div>
+      <div class="time-list" id="time-list-am" style="margin-bottom:20px"></div>
+      <div class="section-sm">🌇 오후</div>
+      <div class="time-list" id="time-list-pm"></div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="time-next-btn" onclick="goTo('booking-persons')" disabled>다음 — 인원 선택 →</button>
+  </div>
+</div>
+
+<!-- 신청 5: 인원 + 확인 -->
+<div class="screen" id="screen-booking-persons">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('booking-time')">←</button>
+    <span class="header-title">탑승 신청</span>
+  </div>
+  <div id="stepbar-5"></div>
+  <div class="scroller">
+    <div class="content-pad">
+      <div class="section-big">몇 명이서 타실 건가요?</div>
+      <div class="remain-notice" id="remain-notice"></div>
+      <div class="person-grid" id="person-grid"></div>
+      <div class="sumbox" id="rsumbox" style="display:none;">
+        <div class="sum-t">✅ 신청 내용</div>
+        <div id="rsum-body"></div>
+      </div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="persons-next-btn" onclick="submitBooking()" disabled>✓ 예약 신청하기</button>
+  </div>
+</div>
+
+<!-- 주민 오늘 운행 -->
+<div class="screen" id="screen-today-run-resident">
+  <div class="run-hero">
+    <div class="run-hero-status">✅ 오늘 운행 일정</div>
+    <div class="run-hero-date" id="rtoday-date"></div>
+  </div>
+  <div class="scroller">
+    <div style="padding:0 16px 110px">
+      <div class="card">
+        <div class="card-title">오늘 운행</div>
+        <div id="rtoday-list"></div>
+      </div>
+    </div>
+  </div>
+  <div class="action-bar"><button class="btn-primary" onclick="goTo('home-resident')">← 홈으로</button></div>
+</div>
+
+<!-- 마을 현황 -->
+<div class="screen" id="screen-village">
+  <div style="background:var(--primary);padding:30px 18px 18px;flex-shrink:0;display:flex;align-items:center;gap:12px;">
+    <button class="back-btn" style="background:rgba(255,255,255,.25);border-color:transparent;color:#fff;" onclick="goTo('home-resident')">←</button>
+    <div>
+      <div style="font-size:22px;font-weight:900;color:#fff;">마을 운행 현황</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.85);margin-top:2px;font-weight:600;" id="village-date"></div>
+    </div>
+  </div>
+  <div class="scroller">
+    <div style="padding:18px 16px 110px;">
+      <div style="font-size:18px;font-weight:800;margin-bottom:16px;">✅ 이번 달은 이렇게 운행되고 있어요</div>
+      <div style="display:flex;flex-direction:column;gap:12px;" id="village-cards"></div>
+    </div>
+  </div>
+  <div class="action-bar"><button class="btn-primary" onclick="goTo('home-resident')">← 홈으로</button></div>
+</div>
+
+<!-- 내 예약 -->
+<div class="screen" id="screen-my-reservations">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('home-resident')">←</button>
+    <span class="header-title">내 예약 현황</span>
+  </div>
+  <div class="scroller">
+    <div class="content-pad">
+      <div id="my-res-list"></div>
+      <div id="no-res-msg" style="display:none;text-align:center;padding:50px 0;"><div style="font-size:50px;margin-bottom:12px">📭</div><div style="font-size:18px;font-weight:700;color:var(--text-muted)">예약 내역이 없어요</div></div>
+    </div>
+  </div>
+  <div class="action-bar"><button class="btn-primary" onclick="goTo('home-resident')">← 홈으로</button></div>
+</div>
+
+<!-- ══════════ 이장님 ══════════ -->
+
+<!-- 이장님 홈 -->
+<div class="screen" id="screen-home-admin">
+  <div class="home-header-admin">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div style="font-size:26px;">🐿️</div><span style="font-size:18px;font-weight:900;">다람쥐택시</span></div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:2px;">이장님 안녕하세요!</div>
+    <div style="font-size:13px;color:rgba(255,255,255,.8);font-weight:500;" id="ahome-date"></div>
+  </div>
+  <div class="scroller">
+    <div style="padding:14px 16px;">
+      <button class="cta" onclick="goTo('manual')">📞 전화 신청 바로가기 ➔</button>
+      <div class="home-boxes">
+        <div class="home-box home-box-g"><div class="home-box-label">오늘 잔여 운행</div><div style="display:flex;align-items:baseline;gap:4px;"><div class="home-box-val" id="ahome-remain">—</div><div class="home-box-unit">회</div></div></div>
+        <div class="home-box home-box-r"><div class="home-box-label">대기 신청</div><div style="display:flex;align-items:baseline;gap:4px;"><div class="home-box-val" id="ahome-wait">—</div><div class="home-box-unit">건</div></div></div>
+      </div>
+    </div>
+    <div class="menu-grid">
+      <button class="menu-btn" onclick="goTo('waiting')"><div class="menu-icon menu-icon-r">⏳</div><div class="menu-text"><div class="menu-title">대기 신청 현황</div><div class="menu-sub">확정·취소·합치기</div></div><div class="menu-cnt" id="ahome-wait2">—</div><div class="menu-arr">›</div></button>
+      <button class="menu-btn" onclick="goTo('today-run-admin')"><div class="menu-icon menu-icon-b">📅</div><div class="menu-text"><div class="menu-title">오늘 운행</div><div class="menu-sub" id="ahome-today-sub">오늘 확정·완료된 운행</div></div><div class="menu-arr">›</div></button>
+      <button class="menu-btn" onclick="goTo('monthly')"><div class="menu-icon menu-icon-g">🗓</div><div class="menu-text"><div class="menu-title">월별 운행 현황</div><div class="menu-sub">주간 캘린더</div></div><div class="menu-arr">›</div></button>
+    </div>
+    <div style="padding:0 16px 24px;"><button class="btn-outline" onclick="logout()" style="font-size:14px;padding:12px;">로그아웃</button></div>
+  </div>
+</div>
+
+<!-- 대기 신청 현황 -->
+<div class="screen" id="screen-waiting">
+  <div class="plain-header">⏳ 대기 신청 현황</div>
+  <div class="tabs">
+    <div class="tab on" id="wtab-w" onclick="switchWTab('waiting')">대기</div>
+    <div class="tab" id="wtab-c" onclick="switchWTab('confirmed')">확정</div>
+    <div class="tab" id="wtab-x" onclick="switchWTab('cancelled')">취소</div>
+  </div>
+  <div class="scroller" id="wait-tab-body"></div>
+  <div class="bottom-bar"><button class="btn-home" onclick="exitEdit();goTo('home-admin')">🏠 홈으로</button></div>
+</div>
+
+<!-- 이장님 오늘 운행 -->
+<div class="screen" id="screen-today-run-admin">
+  <div class="plain-header">📅 오늘 운행</div>
+  <div class="scroller"><div id="atoday-list" style="padding:4px 0 16px;"></div></div>
+  <div class="bottom-bar"><button class="btn-home" onclick="goTo('home-admin')">🏠 홈으로</button></div>
+</div>
+
+<!-- 월별 캘린더 -->
+<div class="screen" id="screen-monthly">
+  <div class="plain-header">🗓 월별 운행 현황</div>
+  <div class="scroller">
+    <div class="week-cal">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;" id="monthly-stats"></div>
+      <div class="week-nav">
+        <button class="week-nav-btn" onclick="moveWeek(-1)">◀</button>
+        <div class="week-label" id="week-label"></div>
+        <button class="week-nav-btn" onclick="moveWeek(1)">▶</button>
+      </div>
+      <div class="week-grid" id="week-grid"></div>
+      <div class="week-detail" id="week-detail" style="display:none;"><div class="week-detail-hd" id="week-detail-hd"></div><div id="week-detail-list"></div></div>
+    </div>
+  </div>
+  <div class="bottom-bar"><button class="btn-home" onclick="goTo('home-admin')">🏠 홈으로</button></div>
+</div>
+
+<!-- 전화신청 6단계 -->
+<div class="screen" id="screen-manual">
+  <div class="header-back"><button class="back-btn" onclick="goTo('home-admin')">←</button><span class="header-title">📞 전화 신청 입력</span></div>
+  <div class="scroller">
+    <div class="ms-wrap">
+      <div class="sth">
+        <div class="sd on" id="sd1">1</div><div class="stl" id="stl1"></div>
+        <div class="sd" id="sd2">2</div><div class="stl" id="stl2"></div>
+        <div class="sd" id="sd3">3</div><div class="stl" id="stl3"></div>
+        <div class="sd" id="sd4">4</div><div class="stl" id="stl4"></div>
+        <div class="sd" id="sd5">5</div><div class="stl" id="stl5"></div>
+        <div class="sd" id="sd6">6</div>
+      </div>
+      <div class="ms on" id="ms1">
+        <div class="mt">누가 전화하셨나요?</div><div class="msub">이름과 연락처를 입력해주세요</div>
+        <input class="fi" id="m-name" placeholder="이름">
+        <input class="fi" id="m-phone" placeholder="연락처 (010-0000-0000)" type="tel">
+        <div class="sf2"><button class="bn" onclick="mStep(2)">다음 →</button></div>
+      </div>
+      <div class="ms" id="ms2">
+        <div class="mt">언제 타실 건가요?</div><div class="msub">날짜를 선택해주세요</div>
+        <div id="m-date-list"></div>
+        <div class="sf2"><button class="bb" onclick="mStep(1)">← 이전</button><button class="bn" onclick="mStep(3)">다음 →</button></div>
+      </div>
+      <div class="ms" id="ms3">
+        <div class="mt">어느 방향인가요?</div><div class="msub">방향·출발지를 선택해주세요</div>
+        <div class="dir-grid">
+          <button class="dir-btn" id="dir-cs" onclick="pickDir('cheongsanmyeon')"><div class="dir-em">🏡</div><div class="dir-label">청산 → 읍내</div></button>
+          <button class="dir-btn" id="dir-sc" onclick="pickDir('eupnae')"><div class="dir-em">🏥</div><div class="dir-label">읍내 → 청산</div></button>
+        </div>
+        <div id="m-dep-wrap" style="display:none;">
+          <div class="section-sm" id="m-dep-lbl">출발지 선택</div>
+          <div id="m-dep-list"></div>
+        </div>
+        <div class="sf2"><button class="bb" onclick="mStep(2)">← 이전</button><button class="bn" onclick="mStep(4)">다음 →</button></div>
+      </div>
+      <div class="ms" id="ms4">
+        <div class="mt">도착지를 선택하세요</div><div class="msub" id="m-arr-msub"></div>
+        <div id="m-arr-list"></div>
+        <div class="sf2"><button class="bb" onclick="mStep(3)">← 이전</button><button class="bn" onclick="mStep(5)">다음 →</button></div>
+      </div>
+      <div class="ms" id="ms5">
+        <div class="mt">몇 시에 타실 건가요?</div><div class="msub">운행 시간을 선택해주세요</div>
+        <div id="m-time-list"></div>
+        <div class="sf2"><button class="bb" onclick="mStep(4)">← 이전</button><button class="bn" onclick="mStep(6)">다음 →</button></div>
+      </div>
+      <div class="ms" id="ms6">
+        <div class="mt">몇 명이 타시나요?</div><div class="msub">탑승 인원을 선택해주세요</div>
+        <div id="m-prs-warn" style="display:none;" class="remain-notice"></div>
+        <div class="person-grid" id="m-prs-list"></div>
+        <div class="sumbox" id="m-sumbox" style="display:none;"><div class="sum-t">✅ 신청 내용 확인</div><div id="m-sum-body"></div></div>
+        <div class="sf2"><button class="bb" onclick="mStep(5)">← 이전</button><button class="bn" style="background:var(--green);" onclick="submitManual()">✓ 접수하기</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 모달들 -->
+<div class="moverlay" id="mod-merge"><div class="msheet">
+  <div class="mhandle"></div><div class="mtit">예약 합치기</div><div class="msub2" id="merge-sub"></div>
+  <div id="merge-preview"></div>
+  <div class="dial-section">
+    <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-align:center;">합쳐진 예약 시각 (10분 단위)</div>
+    <div class="dial-row">
+      <div class="dial-col"><div class="dial-col-label">시</div><button class="dial-arrow-btn" onclick="dialChg('h',1)">▲</button><div class="dial-display" id="dial-h">9</div><button class="dial-arrow-btn" onclick="dialChg('h',-1)">▼</button></div>
+      <div class="dial-colon">:</div>
+      <div class="dial-col"><div class="dial-col-label">분</div><button class="dial-arrow-btn" onclick="dialChg('m',1)">▲</button><div class="dial-display" id="dial-m">00</div><button class="dial-arrow-btn" onclick="dialChg('m',-1)">▼</button></div>
+    </div>
+    <div class="dial-preview" id="dial-preview"></div>
+  </div>
+  <div class="mft"><button class="btn bo2" onclick="closeM('mod-merge')">취소</button><button class="btn bg2" onclick="doMerge()">✓ 합치기</button></div>
+</div></div>
+
+<div class="moverlay" id="mod-confirm"><div class="msheet">
+  <div class="mhandle"></div>
+  <div class="confirm-box"><div class="confirm-q" id="conf-q"></div><div class="confirm-sub" id="conf-sub"></div></div>
+  <div class="mft" id="conf-btns"></div>
+</div></div>
+
+<div class="moverlay" id="mod-req"><div class="msheet">
+  <div class="mhandle"></div><div class="mtit" id="mrt"></div><div class="msub2" id="mrs"></div>
+  <div id="mrb"></div>
+  <div class="mft" id="mft-btns"></div>
+</div></div>
+
+<!-- 성공 화면 -->
+<div class="success-screen" id="success-screen">
+  <div class="success-anim">🎉</div>
+  <h2 style="font-size:24px;font-weight:900;margin:18px 0;">예약 신청 완료!</h2>
+  <div class="success-summary" id="success-summary"></div>
+  <button class="btn-primary" onclick="closeSuccess()">홈으로 →</button>
+</div>
+
+<div class="toast" id="toast"></div>
 </div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-let TOKEN = null;
-let supabase = null;
-const out = document.getElementById("out");
-const statusEl = document.getElementById("status");
-const log = (label, data) => { out.textContent = label + "\n" + JSON.stringify(data, null, 2); };
+// ─── 전역 상태 ───
+const DAYS=['일','월','화','수','목','금','토'];
+let TOKEN=null, ROLE=null, ME=null;
+let supabase=null, realtimeChan=null;
+let LOCATIONS=[], SLOTS=[];
+let booking={date:'',depart_cat:'',depart_id:0,arrive_id:0,hour:0,persons:0};
+let manualSt={name:'',phone:'',date:'',dep_cat:'',dep_id:0,arr_id:0,hour:0,persons:1};
+let manualCur=1;
+let curWTab='waiting', editMode=false, selIds=[];
+let waitingCache=[];
+let dialH=9, dialM=0, mergeIds=[];
+let weekBase=null, weekSel=null;
+let confirmCb=null;
 
-// 내일 날짜 기본값
-const t = new Date(Date.now() + 9*3600*1000 + 24*3600*1000);
-document.getElementById("date").value = `${t.getUTCFullYear()}-${String(t.getUTCMonth()+1).padStart(2,"0")}-${String(t.getUTCDate()).padStart(2,"0")}`;
+const out=document.getElementById('toast');
+const $=(id)=>document.getElementById(id);
+function toast(m){out.textContent=m;out.classList.add('on');setTimeout(()=>out.classList.remove('on'),2500);}
+function log(...a){console.log('[console]',...a);}
 
-async function api(path, { method="GET", body } = {}) {
-  const headers = {};
-  if (TOKEN) headers.Authorization = "Bearer " + TOKEN;
-  if (body) headers["Content-Type"] = "application/json";
-  const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  let j = null; try { j = await res.json(); } catch {}
-  return { status: res.status, json: j };
+// ─── KST 유틸 ───
+function kstDate(off=0){const d=new Date(Date.now()+9*3600*1000+off*86400000);return d;}
+function ymd(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}
+function todayStr(){return ymd(kstDate());}
+function fmtDate(s){const d=new Date(s);return(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+DAYS[d.getDay()]+')';}
+function fmtTime(h,m){const ap=h<12?'오전':'오후';let dh=h>12?h-12:h;if(dh===0)dh=12;return ap+' '+dh+'시'+(m?' '+m+'분':'');}
+
+// ─── API 호출 ───
+async function api(path,{method='GET',body}={}){
+  const h={};if(TOKEN)h.Authorization='Bearer '+TOKEN;if(body)h['Content-Type']='application/json';
+  const r=await fetch(path,{method,headers:h,body:body?JSON.stringify(body):undefined});
+  let j=null;try{j=await r.json();}catch{}
+  return {status:r.status,json:j};
 }
 
-async function afterLogin(token, how, kakaoName) {
-  TOKEN = token;
-  const me = await api("/api/auth/me");
-  log("로그인 정보", me.json);
-  if (me.json?.needsOnboarding) {
-    statusEl.textContent = `✅ ${how} 로그인됨 — 가입 정보 입력이 필요해요 (옆 온보딩 카드)`;
-    document.getElementById("onboarding").style.display = "block";
-    if (kakaoName) document.getElementById("ob_name").value = kakaoName;
-  } else {
-    statusEl.textContent = `✅ ${how} 로그인됨: ${me.json?.profile?.name ?? ""}`;
-    document.getElementById("onboarding").style.display = "none";
+// ─── 라우팅 ───
+function showOnly(id){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  $(id).classList.add('active');
+}
+window.goTo=function(page){
+  showOnly('screen-'+page);
+  if(page==='home-resident') refreshResidentHome();
+  if(page==='home-admin') refreshAdminHome();
+  if(page==='booking-date') initBookingDate();
+  if(page==='booking-depart') initBookingDepart();
+  if(page==='booking-arrive') initBookingArrive();
+  if(page==='booking-time') initBookingTime();
+  if(page==='booking-persons') initBookingPersons();
+  if(page==='today-run-resident') renderTodayRunResident();
+  if(page==='village') renderVillage();
+  if(page==='my-reservations') renderMyReservations();
+  if(page==='waiting') renderWaiting();
+  if(page==='today-run-admin') renderTodayRunAdmin();
+  if(page==='monthly') renderMonthly();
+  if(page==='manual') initManual();
+};
+function renderStepBar(curStep,id){
+  let h='<div class="step-bar">';
+  const labels=['날짜','출발지','도착지','시간','인원'];
+  for(let i=1;i<=5;i++){
+    h+='<div class="step-wrap" style="flex:0 0 auto;"><div class="step-dot '+(i<curStep?'done':i===curStep?'current':'')+'">'+(i<curStep?'✓':i)+'</div><div class="step-label">'+labels[i-1]+'</div></div>';
+    if(i<5) h+='<div class="step-line '+(i<curStep?'done':'')+'"></div>';
   }
-  loadLocations(); loadTimeSlots();
+  h+='</div>';
+  $(id).innerHTML=h;
 }
 
-// 카카오용 supabase 초기화 + 리다이렉트 복귀 세션 감지
-try {
-  const cfg = await (await fetch("/api/dev/config")).json();
-  supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    const meta = session.user?.user_metadata || {};
-    await afterLogin(session.access_token, "카카오", meta.name || meta.full_name || meta.nickname || "");
-  } else {
-    loadLocations(); loadTimeSlots(); // 로그인 전에도 드롭다운 채워두기(공개 API)
-  }
-} catch (e) { console.warn("supabase init 실패:", e); loadLocations(); loadTimeSlots(); }
+// ─── 초기화 ───
+async function init(){
+  setTimeout(()=>{const sp=$('screen-splash');sp.style.transition='opacity .4s';sp.style.opacity='0';setTimeout(()=>{sp.style.display='none';showOnly('screen-login');},400);},1200);
+  try{
+    const cfg=await(await fetch('/api/dev/config')).json();
+    if(cfg.supabaseUrl) supabase=createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+  }catch(e){log('supabase 초기화 실패',e);}
+}
 
-window.kakaoLogin = async () => {
-  if (!supabase) { alert("supabase 초기화가 안 됐어요. 새로고침 해보세요."); return; }
-  // 이메일(account_email)은 비즈앱에서만 가능 → 닉네임만 요청 (이름/전화는 온보딩에서 입력)
-  await supabase.auth.signInWithOAuth({
-    provider: "kakao",
-    options: { redirectTo: location.origin + "/dev-console.html", scopes: "profile_nickname" },
+// ─── 로그인 ───
+window.devLogin=async function(role){
+  const r=await api('/api/dev/login',{method:'POST',body:{role}});
+  if(r.status!==200){toast('로그인 실패: '+(r.json?.error||'')); return;}
+  TOKEN=r.json.access_token;
+  // Realtime이 RLS를 인식하도록 토큰 설정
+  if(supabase&&supabase.realtime&&supabase.realtime.setAuth){try{supabase.realtime.setAuth(TOKEN);}catch(e){log('setAuth 실패',e);}}
+  // 마스터 데이터 로드
+  const loc=await api('/api/locations'); LOCATIONS=loc.json?.locations||[];
+  const ts=await api('/api/time-slots'); SLOTS=ts.json?.timeSlots||[];
+  // 본인 정보
+  const me=await api('/api/auth/me');
+  ME=me.json;
+  ROLE=me.json?.profile?.role||role;
+  // 실시간 구독
+  setupRealtime();
+  // 역할별 홈
+  if(ROLE==='admin'){goTo('home-admin');}
+  else if(me.json?.needsOnboarding){showOnly('screen-onboard');}
+  else{goTo('home-resident');}
+  $('mode-tag').textContent=ROLE==='admin'?'테스트: 이장님':'테스트: 주민';
+  toast('✅ '+(ROLE==='admin'?'이장님':'주민')+' 로그인 완료');
+};
+window.logout=function(){
+  TOKEN=null;ROLE=null;ME=null;
+  if(realtimeChan){supabase.removeChannel(realtimeChan);realtimeChan=null;}
+  showOnly('screen-login');
+  $('mode-tag').textContent='테스트 콘솔';
+};
+window.submitOnboard=async function(){
+  const r=await api('/api/profile',{method:'POST',body:{name:$('ob_name').value,phone:$('ob_phone').value}});
+  if(r.status===201||r.status===200){toast('가입 완료');goTo(ROLE==='admin'?'home-admin':'home-resident');}
+  else toast(r.json?.error||'가입 실패');
+};
+
+// ─── 실시간 동기화 ───
+function setupRealtime(){
+  if(!supabase)return;
+  if(realtimeChan){supabase.removeChannel(realtimeChan);}
+  realtimeChan=supabase.channel('reservations-rt').on('postgres_changes',{event:'*',schema:'public',table:'reservations'},async(payload)=>{
+    log('rt event',payload.eventType);
+    // 현재 화면에 따라 갱신
+    const active=document.querySelector('.screen.active')?.id||'';
+    if(active==='screen-home-resident') refreshResidentHome();
+    if(active==='screen-home-admin') refreshAdminHome();
+    if(active==='screen-village') renderVillage();
+    if(active==='screen-my-reservations') renderMyReservations();
+    if(active==='screen-waiting') renderWaiting();
+    if(active==='screen-today-run-resident') renderTodayRunResident();
+    if(active==='screen-today-run-admin') renderTodayRunAdmin();
+    if(active==='screen-monthly') renderMonthly();
+  }).subscribe();
+}
+
+// ─── 주민 홈 ───
+async function refreshResidentHome(){
+  const today=todayStr();
+  const d=new Date(today);
+  $('rhome-greeting').textContent='안녕하세요, '+(ME?.profile?.name||'주민')+' 님!';
+  $('rhome-date').textContent=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+DAYS[d.getDay()]+'요일';
+}
+
+// ─── 신청 1: 날짜 ───
+function initBookingDate(){
+  booking={date:'',depart_cat:'',depart_id:0,arrive_id:0,hour:0,persons:0};
+  renderStepBar(1,'stepbar-1');
+  let h='';
+  for(let i=0;i<7;i++){
+    const d=kstDate(i),s=ymd(d),dow=d.getUTCDay(),iw=dow===0||dow===6;
+    h+='<div class="date-card'+(iw?' weekend':'')+'" id="dc-'+s+'" onclick="pickDate(\''+s+'\')"><div class="dc-left">'+(i===0?'<div class="dc-today-badge">오늘</div>':'<div class="dc-dow">'+DAYS[dow]+'요일</div>')+'<div class="dc-num">'+d.getUTCDate()+'</div></div><div class="dc-right"><div class="dc-full">'+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일</div></div><div class="dc-check">✓</div></div>';
+  }
+  $('date-list').innerHTML=h;
+  $('date-next-btn').disabled=true;
+}
+window.pickDate=function(s){
+  booking.date=s;
+  document.querySelectorAll('.date-card').forEach(c=>c.classList.remove('selected'));
+  $('dc-'+s).classList.add('selected');
+  $('date-next-btn').disabled=false;
+};
+
+// ─── 신청 2: 출발지 ───
+function initBookingDepart(){renderStepBar(2,'stepbar-2');
+  if(booking.depart_cat){selectDepartCatRender(booking.depart_cat);}
+  else{$('depart-options').innerHTML='<div class="empty">출발 지역을 먼저 선택하세요 ↑</div>';}
+  $('depart-next-btn').disabled=!booking.depart_id;
+}
+window.selectDepartCat=function(cat){booking.depart_cat=cat;booking.depart_id=0;booking.arrive_id=0;selectDepartCatRender(cat);$('depart-next-btn').disabled=true;};
+function selectDepartCatRender(cat){
+  $('depart-cat-c').classList.toggle('selected',cat==='cheongsanmyeon');
+  $('depart-cat-e').classList.toggle('selected',cat==='eupnae');
+  const opts=LOCATIONS.filter(l=>l.category===cat);
+  $('depart-options').innerHTML=opts.map(l=>'<button class="loc-opt-btn'+(booking.depart_id===l.id?' selected':'')+'" id="dep-opt-'+l.id+'" onclick="pickDepart('+l.id+')"><span class="loc-icon">'+(l.emoji||'📍')+'</span><span style="flex:1;font-weight:800;">'+l.name+'</span><span class="loc-check">✓</span></button>').join('');
+}
+window.pickDepart=function(id){booking.depart_id=id;document.querySelectorAll('#depart-options .loc-opt-btn').forEach(b=>b.classList.remove('selected'));$('dep-opt-'+id).classList.add('selected');$('depart-next-btn').disabled=false;};
+
+// ─── 신청 3: 도착지 ───
+function initBookingArrive(){renderStepBar(3,'stepbar-3');
+  const opp=booking.depart_cat==='cheongsanmyeon'?'eupnae':'cheongsanmyeon';
+  $('auto-arrive-text').textContent='출발이 '+(booking.depart_cat==='cheongsanmyeon'?'청산면':'읍내')+'이라 도착지는 '+(opp==='cheongsanmyeon'?'청산면':'읍내')+'입니다';
+  const opts=LOCATIONS.filter(l=>l.category===opp);
+  $('arrive-options').innerHTML=opts.map(l=>'<button class="loc-opt-btn'+(booking.arrive_id===l.id?' selected':'')+'" id="arr-opt-'+l.id+'" onclick="pickArrive('+l.id+')"><span class="loc-icon">'+(l.emoji||'📍')+'</span><span style="flex:1;font-weight:800;">'+l.name+'</span><span class="loc-check">✓</span></button>').join('');
+  $('arrive-next-btn').disabled=!booking.arrive_id;
+}
+window.pickArrive=function(id){booking.arrive_id=id;document.querySelectorAll('#arrive-options .loc-opt-btn').forEach(b=>b.classList.remove('selected'));$('arr-opt-'+id).classList.add('selected');$('arrive-next-btn').disabled=false;};
+
+// ─── 신청 4: 시간 ───
+async function initBookingTime(){renderStepBar(4,'stepbar-4');
+  $('time-list-am').innerHTML='<div class="empty">불러오는 중...</div>';
+  $('time-list-pm').innerHTML='';
+  const r=await api('/api/availability?date='+booking.date+'&origin='+booking.depart_cat);
+  const slots=r.json?.slots||[];
+  const am=slots.filter(s=>s.hour<12),pm=slots.filter(s=>s.hour>=12);
+  function btnHTML(s){
+    const lbl=SLOTS.find(t=>t.hour===s.hour)?.label||(s.hour+'시');
+    const isSel=booking.hour===s.hour;
+    let cls='time-btn';
+    if(s.isPast)cls+=' time-past';
+    else if(!s.available)cls+=' time-full';
+    else if(isSel)cls+=' selected';
+    const click=s.isPast||!s.available?'':'onclick="pickHour('+s.hour+')"';
+    const right=s.isPast?'지난 시간':!s.available?'마감':'남은 '+s.remaining+'석';
+    return '<button class="'+cls+'" id="tb-'+s.hour+'" '+click+'><span>'+lbl+'</span><span style="font-size:13px;color:'+(s.isPast||!s.available?'#aaa':'var(--text-muted)')+';font-weight:700;">'+right+'</span></button>';
+  }
+  $('time-list-am').innerHTML=am.length?am.map(btnHTML).join(''):'<div class="empty">없음</div>';
+  $('time-list-pm').innerHTML=pm.length?pm.map(btnHTML).join(''):'<div class="empty">없음</div>';
+  $('time-next-btn').disabled=!booking.hour;
+}
+window.pickHour=function(h){booking.hour=h;document.querySelectorAll('.time-btn').forEach(b=>b.classList.remove('selected'));$('tb-'+h)?.classList.add('selected');$('time-next-btn').disabled=false;};
+
+// ─── 신청 5: 인원 ───
+async function initBookingPersons(){renderStepBar(5,'stepbar-5');
+  const r=await api('/api/availability/seats?date='+booking.date+'&hour='+booking.hour+'&origin='+booking.depart_cat);
+  const max=r.json?.remaining||0;
+  if(max<4){$('remain-notice').style.display='block';$('remain-notice').innerHTML='⚠️ 이 시간엔 <b>'+max+'명</b>까지만 가능해요';}
+  else{$('remain-notice').style.display='none';}
+  let h='';
+  for(let i=1;i<=4;i++){
+    const dis=i>max;
+    h+='<button class="person-pick-btn'+(booking.persons===i?' selected':'')+(dis?' disabled':'')+'" id="ppb-'+i+'" '+(dis?'':'onclick="pickPersons('+i+')"')+'><div class="ppb-num">'+i+'명</div><div class="ppb-icons">'+'🧑'.repeat(i)+'</div></button>';
+  }
+  $('person-grid').innerHTML=h;
+  updateBookingSummary();
+}
+window.pickPersons=function(n){booking.persons=n;document.querySelectorAll('.person-pick-btn').forEach(b=>b.classList.remove('selected'));$('ppb-'+n)?.classList.add('selected');$('persons-next-btn').disabled=false;updateBookingSummary();};
+function updateBookingSummary(){
+  if(!booking.persons){$('rsumbox').style.display='none';return;}
+  const dep=LOCATIONS.find(l=>l.id===booking.depart_id);
+  const arr=LOCATIONS.find(l=>l.id===booking.arrive_id);
+  const slot=SLOTS.find(s=>s.hour===booking.hour);
+  $('rsum-body').innerHTML=
+    '<div class="sum-r"><span class="sum-k">날짜</span><span class="sum-v">'+fmtDate(booking.date)+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">시간</span><span class="sum-v">'+(slot?.label||booking.hour+'시')+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">출발</span><span class="sum-v">'+dep?.name+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">도착</span><span class="sum-v">'+arr?.name+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">인원</span><span class="sum-v">'+booking.persons+'명</span></div>';
+  $('rsumbox').style.display='block';
+}
+window.submitBooking=async function(){
+  const r=await api('/api/reservations',{method:'POST',body:{date:booking.date,hour:booking.hour,departure_id:booking.depart_id,arrival_id:booking.arrive_id,persons:booking.persons}});
+  if(r.status===201){
+    const dep=LOCATIONS.find(l=>l.id===booking.depart_id),arr=LOCATIONS.find(l=>l.id===booking.arrive_id),slot=SLOTS.find(s=>s.hour===booking.hour);
+    $('success-summary').innerHTML=
+      '<div class="summary-row">📅 '+fmtDate(booking.date)+' '+(slot?.label||'')+'</div>'+
+      '<div class="summary-row">🚩 '+dep?.name+' → '+arr?.name+'</div>'+
+      '<div class="summary-row">👥 '+booking.persons+'명</div>'+
+      '<div class="summary-row">⏳ 대기 상태 — 이장님 확정을 기다려주세요</div>';
+    $('success-screen').classList.add('show');
+  } else {
+    toast(r.json?.error||'예약 실패');
+  }
+};
+window.closeSuccess=function(){$('success-screen').classList.remove('show');goTo('home-resident');};
+
+// ─── 주민 오늘 운행 ───
+async function renderTodayRunResident(){
+  $('rtoday-date').textContent=todayStr();
+  const r=await api('/api/runs/today');
+  const runs=r.json?.runs||[];
+  if(!runs.length){$('rtoday-list').innerHTML='<div class="empty">오늘 운행 없음</div>';return;}
+  $('rtoday-list').innerHTML=runs.map(run=>{
+    const lbl=SLOTS.find(s=>s.hour===run.hour)?.label||run.hour+'시';
+    const dir=(run.origin==='cheongsanmyeon'?'청산면':'읍내')+' → '+(run.destination==='cheongsanmyeon'?'청산면':'읍내');
+    return '<div class="run-item"><div class="run-dot" style="background:var(--primary)"></div><div class="run-info"><div class="run-time">'+lbl+'</div><div class="run-route">'+dir+' · '+run.persons+'명 (남은 '+run.seats_left+'석)</div></div></div>';
+  }).join('');
+}
+
+// ─── 마을 현황 ───
+async function renderVillage(){
+  $('village-date').textContent=todayStr();
+  const r=await api('/api/stats/village');
+  const s=r.json;if(!s){$('village-cards').innerHTML='<div class="empty">불러오기 실패</div>';return;}
+  $('village-cards').innerHTML=
+    '<div class="vstat-card"><div class="vstat-label">이번 달 잔여</div><div class="vstat-val">'+s.monthly.remaining+' <span class="vstat-unit">회</span></div></div>'+
+    '<div class="vstat-card"><div class="vstat-label">이번 달 탑승자</div><div class="vstat-val">'+s.monthly.passengers+' <span class="vstat-unit">명</span></div></div>'+
+    '<div class="vstat-card"><div class="vstat-label">오늘 운행</div><div class="vstat-val g">'+s.daily.used+' <span class="vstat-unit">회</span></div></div>'+
+    '<div class="vstat-card"><div class="vstat-label">평균 탑승자</div><div class="vstat-val g">'+(s.monthly.avg_passengers_per_run?.toFixed?.(1)||s.monthly.avg_passengers_per_run||0)+' <span class="vstat-unit">명</span></div></div>';
+}
+
+// ─── 내 예약 ───
+async function renderMyReservations(){
+  const r=await api('/api/reservations/me');
+  const list=r.json?.reservations||[];
+  if(!list.length){$('my-res-list').innerHTML='';$('no-res-msg').style.display='block';return;}
+  $('no-res-msg').style.display='none';
+  $('my-res-list').innerHTML=list.map(x=>{
+    const bcls='badge-'+x.effective_status;
+    const blbl={waiting:'대기중',confirmed:'확정',completed:'완료',cancelled:'취소'}[x.effective_status]||x.effective_status;
+    const canCancel=(x.status==='waiting'||x.status==='confirmed')&&x.effective_status!=='completed';
+    return '<div class="res-card"><div class="res-card-top"><span class="res-badge '+bcls+'">'+blbl+'</span>'+(canCancel?'<button class="res-cancel-btn" onclick="cancelMyRes('+x.id+')">취소</button>':'')+'</div><div class="res-route">'+x.departure?.name+' → '+x.arrival?.name+'</div><div class="res-detail">📅 '+fmtDate(x.reservation_date)+' '+(x.time_label||'')+'<br>👥 '+x.persons+'명</div></div>';
+  }).join('');
+}
+window.cancelMyRes=async function(id){
+  if(!confirm('취소하시겠어요?'))return;
+  const r=await api('/api/reservations/'+id+'/cancel',{method:'PATCH'});
+  if(r.status===200)toast('취소되었습니다');else toast(r.json?.error||'취소 실패');
+  renderMyReservations();
+};
+
+// ─── 이장님 홈 ───
+async function refreshAdminHome(){
+  const today=todayStr();
+  const d=new Date(today);
+  $('ahome-date').textContent=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+DAYS[d.getDay()]+'요일';
+  const dash=await api('/api/admin/dashboard');
+  const j=dash.json;
+  if(j){
+    $('ahome-remain').textContent=j.limits?.daily?.remaining??'—';
+    $('ahome-wait').textContent=j.today?.waiting??'—';
+    $('ahome-wait2').textContent=j.today?.waiting??'—';
+    $('ahome-today-sub').textContent='오늘 확정 '+(j.today?.confirmed||0)+'건';
+  }
+}
+
+// ─── 대기 신청 현황 ───
+window.switchWTab=function(t){curWTab=t;editMode=false;selIds=[];['waiting','confirmed','cancelled'].forEach(k=>{$('wtab-'+(k==='waiting'?'w':k==='confirmed'?'c':'x')).classList.toggle('on',k===t);});renderWaiting();};
+async function renderWaiting(){
+  const r=await api('/api/admin/reservations?status='+curWTab);
+  const list=r.json?.reservations||[];
+  waitingCache=list;
+  let h='';
+  if(curWTab==='waiting'){
+    h+='<div class="edit-bar"><div class="edit-bar-info">'+(editMode?selIds.length+'개 선택됨':'편집 모드로 예약을 합칠 수 있어요')+'</div><div style="display:flex;gap:6px;flex-wrap:wrap;">'+
+      (editMode?'<button class="btn by2" style="opacity:'+(selIds.length>=2?1:.4)+'" onclick="openMerge()">합치기</button><button class="btn bo2" onclick="exitEdit()">완료</button>':'<button class="btn bo2" onclick="enterEdit()">편집</button>')+'</div></div>';
+  }
+  if(!list.length){h+='<div class="empty">'+({waiting:'대기 중인 신청이 없어요',confirmed:'확정된 신청이 없어요',cancelled:'취소된 신청이 없어요'}[curWTab])+'</div>';}
+  else list.forEach(x=>h+=waitItemHTML(x));
+  $('wait-tab-body').innerHTML=h;
+}
+function waitItemHTML(x){
+  const isSel=selIds.indexOf(x.id)>-1;
+  const lbl=SLOTS.find(s=>s.hour===x.hour)?.label||x.hour+'시';
+  const srcBadge=x.resident?.is_guest?'<span class="wi-src">📞 전화</span>':'';
+  const usageBadge='<span class="wi-usage">이달 '+(x.monthly_confirmed||0)+'회</span>';
+  const checkEl=editMode?'<span class="check-circle'+(isSel?' on':'')+'"></span>':'';
+  let btns='';
+  if(curWTab==='waiting'&&!editMode){
+    btns='<div class="wi-btns"><button class="wi-btn wi-btn-g" onclick="event.stopPropagation();adminConfirm('+x.id+')">✓ 확정</button><button class="wi-btn wi-btn-r" onclick="event.stopPropagation();adminCancel('+x.id+')">취소</button></div>';
+  } else if(curWTab==='confirmed'){
+    btns='<div class="wi-btns"><button class="wi-btn wi-btn-r" onclick="event.stopPropagation();adminCancel('+x.id+')">취소</button></div>';
+  }
+  return '<div class="wait-card"><div class="wait-item'+(isSel?' wait-item-sel':'')+'" onclick="waitItemClick('+x.id+')"><div style="display:flex;gap:10px;"><div>'+checkEl+'</div><div style="flex:1;"><div class="wi-date-badge">'+fmtDate(x.reservation_date)+' · '+lbl+'</div><div class="wi-top"><span class="wi-name">'+(x.resident?.name||'—')+' 님</span></div><div class="wi-route">📍 '+x.departure?.name+' → '+x.arrival?.name+'<br>👥 '+x.persons+'명</div><div class="wi-bottom">'+srcBadge+usageBadge+'</div>'+btns+'</div></div></div></div>';
+}
+window.waitItemClick=function(id){if(editMode){const i=selIds.indexOf(id);if(i>-1)selIds.splice(i,1);else selIds.push(id);renderWaiting();}};
+window.enterEdit=function(){editMode=true;selIds=[];renderWaiting();};
+window.exitEdit=function(){editMode=false;selIds=[];renderWaiting();};
+
+function showConfirm(q,sub,okLbl,okCls,cb){
+  $('conf-q').textContent=q;$('conf-sub').textContent=sub||'';confirmCb=cb;
+  $('conf-btns').innerHTML='<button class="btn bo2" onclick="closeM(\'mod-confirm\')">닫기</button><button class="btn '+okCls+'" onclick="confirmCb&&confirmCb();closeM(\'mod-confirm\')">'+okLbl+'</button>';
+  $('mod-confirm').classList.add('on');
+}
+window.adminConfirm=function(id){
+  const x=waitingCache.find(r=>r.id===id);if(!x)return;
+  showConfirm('확정하시겠습니까?',x.resident?.name+' 님 · '+fmtDate(x.reservation_date)+' '+(SLOTS.find(s=>s.hour===x.hour)?.label||''),'확정 알림 발송','bg2',async()=>{
+    const r=await api('/api/admin/reservations/'+id+'/confirm',{method:'PATCH'});
+    if(r.status===200)toast('💬 '+x.resident?.name+' 님께 확정 알림 발송');else toast(r.json?.error||'확정 실패');
+    renderWaiting();
   });
 };
-window.devLogin = async (role) => {
-  const r = await api("/api/dev/login", { method:"POST", body:{ role } });
-  if (r.status === 200) await afterLogin(r.json.access_token, role === "admin" ? "이장님(테스트)" : "주민(테스트)");
-  else log("로그인 실패 (ENABLE_DEV_LOGIN 확인)", r.json);
+window.adminCancel=function(id){
+  const x=waitingCache.find(r=>r.id===id);if(!x)return;
+  const reason=prompt('취소 사유를 입력하세요:','차량 사정');
+  if(!reason)return;
+  showConfirm('정말 취소하시겠습니까?',x.resident?.name+' 님 · 사유: '+reason,'취소 알림 발송','br2',async()=>{
+    const r=await api('/api/admin/reservations/'+id+'/cancel',{method:'PATCH',body:{reason}});
+    if(r.status===200)toast('💬 '+x.resident?.name+' 님께 취소 알림 발송');else toast(r.json?.error||'취소 실패');
+    renderWaiting();
+  });
 };
-window.submitOnboarding = async () => {
-  const name = document.getElementById("ob_name").value;
-  const phone = document.getElementById("ob_phone").value;
-  const r = await api("/api/profile", { method:"POST", body:{ name, phone } });
-  log("프로필 생성", r.json);
-  if (r.status === 201 || r.status === 200) {
-    document.getElementById("onboarding").style.display = "none";
-    statusEl.textContent = "✅ 가입 완료: " + (r.json.profile?.name ?? "");
+
+// ─── 합치기 ───
+window.openMerge=function(){
+  if(selIds.length<2){toast('2개 이상 선택해주세요');return;}
+  mergeIds=selIds.slice();
+  const sels=mergeIds.map(id=>waitingCache.find(r=>r.id===id)).filter(Boolean);
+  const names=sels.map(r=>r.resident?.name).join(', ');
+  $('merge-sub').textContent=sels.length+'건 합치기: '+names;
+  $('merge-preview').innerHTML=sels.map(r=>'<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);color:var(--text-muted);">'+r.resident?.name+' · '+(SLOTS.find(s=>s.hour===r.hour)?.label||r.hour+'시')+' · '+r.departure?.name+'→'+r.arrival?.name+'</div>').join('');
+  dialH=sels[0]?.hour||9;dialM=0;updateDial();
+  $('mod-merge').classList.add('on');
+};
+window.dialChg=function(t,d){if(t==='h'){dialH+=d;if(dialH<9)dialH=18;if(dialH>18)dialH=9;}else{dialM+=d*10;if(dialM<0)dialM=50;if(dialM>=60)dialM=0;}updateDial();};
+function updateDial(){$('dial-h').textContent=dialH;$('dial-m').textContent=String(dialM).padStart(2,'0');$('dial-preview').textContent=fmtTime(dialH,dialM);}
+window.doMerge=async function(){
+  const r=await api('/api/admin/reservations/merge',{method:'POST',body:{reservation_ids:mergeIds,new_hour:dialH,new_minute:dialM}});
+  if(r.status===200){toast('💬 합치기 + 확정 알림 발송 완료');closeM('mod-merge');exitEdit();}
+  else toast(r.json?.error||'합치기 실패');
+};
+window.closeM=function(id){$(id).classList.remove('on');};
+
+// ─── 이장님 오늘 운행 ───
+async function renderTodayRunAdmin(){
+  const r=await api('/api/runs/today');
+  const runs=r.json?.runs||[];
+  $('atoday-list').innerHTML=runs.length?runs.map(run=>{
+    const lbl=SLOTS.find(s=>s.hour===run.hour)?.label||run.hour+'시';
+    return '<div class="wait-card"><div class="wait-item"><div class="wi-date-badge">오늘 · '+lbl+'</div><div class="wi-route">📍 '+(run.origin==='cheongsanmyeon'?'청산면':'읍내')+' → '+(run.destination==='cheongsanmyeon'?'청산면':'읍내')+'<br>👥 '+run.persons+'명 (남은 '+run.seats_left+'석)</div></div></div>';
+  }).join(''):'<div class="empty">오늘 운행 없음</div>';
+}
+
+// ─── 월별 캘린더 ───
+function renderMonthly(){
+  if(!weekBase){const t=kstDate();const day=t.getUTCDay();weekBase=new Date(t.getTime()-day*86400000);}
+  renderMonthlyStats();
+  const start=weekBase;
+  const monthLabel=(start.getUTCMonth()+1)+'월 '+Math.ceil((start.getUTCDate()+(new Date(Date.UTC(start.getUTCFullYear(),start.getUTCMonth(),1)).getUTCDay()))/7)+'주차';
+  $('week-label').textContent=monthLabel;
+  let h='';
+  for(let i=0;i<7;i++){
+    const d=new Date(start.getTime()+i*86400000),s=ymd(d);
+    const isTod=s===todayStr(),isSel=weekSel===s;
+    h+='<div class="wday-col"><div class="wday-h">'+DAYS[d.getUTCDay()]+'</div><div class="wday-cell'+(isTod?' today':'')+(isSel?' sel':'')+'" onclick="selWeekDay(\''+s+'\')"><div class="wday-num">'+d.getUTCDate()+'</div></div></div>';
   }
-};
-window.call = async (path) => { const r = await api(path); log(`GET ${path}  →  HTTP ${r.status}`, r.json); };
-
-async function loadLocations() {
-  const r = await api("/api/locations");
-  const opts = (r.json?.locations||[]).map(l => `<option value="${l.id}">${l.emoji||""} ${l.name} (${l.category==="cheongsanmyeon"?"청산면":"읍내"})</option>`).join("");
-  document.getElementById("dep").innerHTML = opts;
-  document.getElementById("arr").innerHTML = opts;
+  $('week-grid').innerHTML=h;
+  if(weekSel)showWeekDetail(weekSel);else $('week-detail').style.display='none';
 }
-async function loadTimeSlots() {
-  const r = await api("/api/time-slots");
-  const slots = r.json?.timeSlots || [];
-  document.getElementById("hour").innerHTML = slots.map(s => `<option value="${s.hour}">${s.label}</option>`).join("");
-  document.getElementById("merge_hour").innerHTML = slots.map(s => `<option value="${s.hour}">${s.hour}시</option>`).join("");
+async function renderMonthlyStats(){
+  const month=todayStr().slice(0,7);
+  const r=await api('/api/admin/stats?month='+month);
+  const j=r.json;if(!j){$('monthly-stats').innerHTML='';return;}
+  $('monthly-stats').innerHTML=
+    '<div style="background:var(--green-light);border-radius:14px;padding:14px;"><div style="font-size:13px;color:var(--green-dark);font-weight:700;">이번 달 잔여</div><div style="font-size:30px;font-weight:900;color:var(--green);">'+(112-j.confirmed_runs)+'<span style="font-size:14px;font-weight:700;"> /112회</span></div></div>'+
+    '<div style="background:var(--green-light);border-radius:14px;padding:14px;"><div style="font-size:13px;color:var(--green-dark);font-weight:700;">월별 탑승자</div><div style="font-size:30px;font-weight:900;color:var(--green);">'+j.confirmed_persons+'<span style="font-size:14px;font-weight:700;"> 명</span></div></div>';
 }
-window.availability = async () => {
-  const date = document.getElementById("date").value;
-  const origin = document.getElementById("origin").value;
-  await window.call(`/api/availability?date=${date}&origin=${origin}`);
+window.moveWeek=function(d){weekBase=new Date(weekBase.getTime()+d*7*86400000);weekSel=null;$('week-detail').style.display='none';renderMonthly();};
+window.selWeekDay=async function(s){weekSel=s;renderMonthly();showWeekDetail(s);};
+async function showWeekDetail(s){
+  const d=new Date(s);$('week-detail-hd').textContent='📅 '+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일 ('+DAYS[d.getUTCDay()]+'요일)';
+  const r=await api('/api/admin/reservations?date='+s);
+  const list=(r.json?.reservations||[]).filter(x=>x.effective_status!=='cancelled');
+  $('week-detail-list').innerHTML=list.length?list.map(x=>{
+    const lbl=SLOTS.find(t=>t.hour===x.hour)?.label||x.hour+'시';
+    return '<div class="wait-item" style="border-bottom:1px solid var(--border);"><div class="wi-date-badge">'+lbl+'</div><div class="wi-top"><span class="wi-name">'+x.resident?.name+'</span><span class="res-badge badge-'+x.effective_status+'">'+({waiting:'대기',confirmed:'확정',completed:'완료'}[x.effective_status]||'')+'</span></div><div class="wi-route">'+x.departure?.name+' → '+x.arrival?.name+' · '+x.persons+'명</div></div>';
+  }).join(''):'<div class="empty">이날 신청이 없어요</div>';
+  $('week-detail').style.display='block';
+}
+
+// ─── 전화신청 6단계 ───
+function initManual(){
+  manualSt={name:'',phone:'',date:'',dep_cat:'',dep_id:0,arr_id:0,hour:0,persons:1};manualCur=1;
+  $('m-name').value='';$('m-phone').value='';
+  let h='';for(let i=0;i<7;i++){const d=kstDate(i),s=ymd(d);
+    h+='<div class="date-card" id="m-dc-'+s+'" onclick="pickMDate(\''+s+'\')"><div class="dc-left">'+(i===0?'<div class="dc-today-badge">오늘</div>':'<div class="dc-dow">'+DAYS[d.getUTCDay()]+'요일</div>')+'<div class="dc-num">'+d.getUTCDate()+'</div></div><div class="dc-right"><div class="dc-full">'+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일</div></div><div class="dc-check">✓</div></div>';
+  }
+  $('m-date-list').innerHTML=h;
+  document.querySelectorAll('.dir-btn').forEach(b=>b.classList.remove('on'));
+  $('m-dep-wrap').style.display='none';$('m-sumbox').style.display='none';
+  document.querySelectorAll('.ms').forEach(el=>el.classList.remove('on'));$('ms1').classList.add('on');
+  updMStep(1);
+}
+window.mStep=function(n){
+  if(n>manualCur){
+    if(manualCur===1){const nm=$('m-name').value.trim();if(!nm){alert('이름을 입력해주세요');return;}manualSt.name=nm;manualSt.phone=$('m-phone').value.trim();if(!manualSt.phone){alert('전화번호를 입력해주세요');return;}}
+    if(manualCur===2&&!manualSt.date){alert('날짜 선택');return;}
+    if(manualCur===3&&(!manualSt.dep_cat||!manualSt.dep_id)){alert('방향·출발지 선택');return;}
+    if(manualCur===4&&!manualSt.arr_id){alert('도착지 선택');return;}
+    if(manualCur===5&&!manualSt.hour){alert('시간 선택');return;}
+  }
+  if(n===4) buildMArr();
+  if(n===5) buildMTime();
+  if(n===6) buildMPrs();
+  manualCur=n;
+  document.querySelectorAll('.ms').forEach(el=>el.classList.remove('on'));$('ms'+n).classList.add('on');
+  updMStep(n);
 };
-window.book = async () => {
-  const body = {
-    date: document.getElementById("date").value,
-    hour: Number(document.getElementById("hour").value),
-    departure_id: Number(document.getElementById("dep").value),
-    arrival_id: Number(document.getElementById("arr").value),
-    persons: Number(document.getElementById("persons").value),
-  };
-  const r = await api("/api/reservations", { method:"POST", body });
-  log(`POST /api/reservations  →  HTTP ${r.status}`, r.json);
-  if (r.status === 201) window.myReservations();
+function updMStep(n){for(let i=1;i<=6;i++){$('sd'+i).className='sd'+(i<n?' dn':i===n?' on':'');}for(let j=1;j<=5;j++){$('stl'+j).className='stl'+(j<n?' dn':'');}}
+window.pickMDate=function(s){manualSt.date=s;document.querySelectorAll('#m-date-list .date-card').forEach(c=>c.classList.remove('selected'));$('m-dc-'+s).classList.add('selected');};
+window.pickDir=function(cat){manualSt.dep_cat=cat;manualSt.dep_id=0;manualSt.arr_id=0;
+  $('dir-cs').classList.toggle('on',cat==='cheongsanmyeon');$('dir-sc').classList.toggle('on',cat==='eupnae');
+  $('m-dep-lbl').textContent='출발지 ('+(cat==='cheongsanmyeon'?'청산면':'읍내')+') 선택';
+  const opts=LOCATIONS.filter(l=>l.category===cat);
+  $('m-dep-list').innerHTML=opts.map(l=>'<button class="loc-opt-btn" id="m-dep-'+l.id+'" onclick="pickMDep('+l.id+')"><span class="loc-icon">'+(l.emoji||'📍')+'</span><span style="flex:1;font-weight:700;">'+l.name+'</span><span class="loc-check">✓</span></button>').join('');
+  $('m-dep-wrap').style.display='block';
 };
-window.myReservations = async () => {
-  const r = await api("/api/reservations/me");
-  log(`GET /api/reservations/me  →  HTTP ${r.status}`, r.json);
-  document.getElementById("mylist").innerHTML = (r.json?.reservations||[]).map(x =>
-    `<div class="item">${x.reservation_date} ${x.time_label} · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
-     <span class="tag ${x.effective_status}">${x.effective_status}</span>
-     <button class="red" onclick="cancelMine(${x.id})">취소</button></div>`).join("") || "<div class='muted'>예약 없음</div>";
-};
-window.cancelMine = async (id) => {
-  const r = await api(`/api/reservations/${id}/cancel`, { method:"PATCH" });
-  log(`취소 ${id}  →  HTTP ${r.status}`, r.json);
-  window.myReservations();
-};
-window.adminWaiting = async () => {
-  const r = await api("/api/admin/reservations?status=waiting");
-  log(`GET /api/admin/reservations?status=waiting  →  HTTP ${r.status}`, r.json);
-  document.getElementById("adminlist").innerHTML = (r.json?.reservations||[]).map(x =>
-    `<div class="item">
-       <label><input type="checkbox" class="merge-chk" value="${x.id}"/> 합치기선택</label>
-       #${x.id} ${x.reservation_date} ${x.time_label} · ${x.resident?.name}(${x.resident?.phone})${x.resident?.is_guest?" 📞전화":""} · 이달 ${x.monthly_confirmed}회 · ${x.departure?.name}→${x.arrival?.name} · ${x.persons}명
-       <button class="green" onclick="adminConfirm(${x.id})">확정</button>
-       <button class="red" onclick="adminCancel(${x.id})">취소</button>
-     </div>`).join("") || "<div class='muted'>대기 예약 없음</div>";
-};
-window.adminConfirm = async (id) => {
-  const r = await api(`/api/admin/reservations/${id}/confirm`, { method:"PATCH" });
-  log(`확정 ${id}  →  HTTP ${r.status}`, r.json);
-  window.adminWaiting();
-};
-window.adminCancel = async (id) => {
-  const reason = prompt("취소 사유:", "차량 사정");
-  if (!reason) return;
-  const r = await api(`/api/admin/reservations/${id}/cancel`, { method:"PATCH", body:{ reason } });
-  log(`관리자 취소 ${id}  →  HTTP ${r.status}`, r.json);
-  window.adminWaiting();
+window.pickMDep=function(id){manualSt.dep_id=id;document.querySelectorAll('#m-dep-list .loc-opt-btn').forEach(b=>b.classList.remove('selected'));$('m-dep-'+id).classList.add('selected');};
+function buildMArr(){
+  if(!manualSt.dep_cat)return;
+  const opp=manualSt.dep_cat==='cheongsanmyeon'?'eupnae':'cheongsanmyeon';
+  $('m-arr-msub').textContent='도착지 ('+(opp==='cheongsanmyeon'?'청산면':'읍내')+') 선택';
+  const opts=LOCATIONS.filter(l=>l.category===opp);
+  $('m-arr-list').innerHTML=opts.map(l=>'<button class="loc-opt-btn" id="m-arr-'+l.id+'" onclick="pickMArr('+l.id+')"><span class="loc-icon">'+(l.emoji||'📍')+'</span><span style="flex:1;font-weight:700;">'+l.name+'</span><span class="loc-check">✓</span></button>').join('');
+}
+window.pickMArr=function(id){manualSt.arr_id=id;document.querySelectorAll('#m-arr-list .loc-opt-btn').forEach(b=>b.classList.remove('selected'));$('m-arr-'+id).classList.add('selected');};
+async function buildMTime(){
+  const r=await api('/api/availability?date='+manualSt.date+'&origin='+manualSt.dep_cat);
+  const slots=r.json?.slots||[];
+  $('m-time-list').innerHTML=slots.map(s=>{
+    const lbl=SLOTS.find(t=>t.hour===s.hour)?.label||s.hour+'시';
+    let cls='time-btn';
+    if(s.isPast)cls+=' time-past';else if(!s.available)cls+=' time-full';
+    const right=s.isPast?'지난시간':!s.available?'마감':'남은 '+s.remaining;
+    const click=s.isPast||!s.available?'':'onclick="pickMTime('+s.hour+')"';
+    return '<button class="'+cls+'" id="mtb-'+s.hour+'" '+click+'><span>'+lbl+'</span><span style="font-size:13px;color:#888;">'+right+'</span></button>';
+  }).join('');
+}
+window.pickMTime=function(h){manualSt.hour=h;document.querySelectorAll('#m-time-list .time-btn').forEach(b=>b.classList.remove('selected'));$('mtb-'+h)?.classList.add('selected');};
+async function buildMPrs(){
+  const r=await api('/api/availability/seats?date='+manualSt.date+'&hour='+manualSt.hour+'&origin='+manualSt.dep_cat);
+  const max=r.json?.remaining||0;
+  if(max<4){$('m-prs-warn').style.display='block';$('m-prs-warn').innerHTML='⚠️ 이 시간 <b>'+max+'명</b>까지만';}else $('m-prs-warn').style.display='none';
+  let h='';for(let i=1;i<=4;i++){const dis=i>max;h+='<button class="person-pick-btn'+(manualSt.persons===i?' selected':'')+(dis?' disabled':'')+'" id="mpb-'+i+'" '+(dis?'':'onclick="pickMPrs('+i+')"')+'><div class="ppb-num">'+i+'명</div></button>';}
+  $('m-prs-list').innerHTML=h;
+  updMSum();
+}
+window.pickMPrs=function(n){manualSt.persons=n;document.querySelectorAll('#m-prs-list .person-pick-btn').forEach(b=>b.classList.remove('selected'));$('mpb-'+n)?.classList.add('selected');updMSum();};
+function updMSum(){
+  if(!manualSt.dep_id||!manualSt.arr_id||!manualSt.hour)return;
+  const dep=LOCATIONS.find(l=>l.id===manualSt.dep_id),arr=LOCATIONS.find(l=>l.id===manualSt.arr_id),slot=SLOTS.find(s=>s.hour===manualSt.hour);
+  $('m-sum-body').innerHTML=
+    '<div class="sum-r"><span class="sum-k">이름</span><span class="sum-v">'+manualSt.name+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">날짜·시간</span><span class="sum-v">'+fmtDate(manualSt.date)+' '+(slot?.label||'')+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">출발</span><span class="sum-v">'+dep?.name+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">도착</span><span class="sum-v">'+arr?.name+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">인원</span><span class="sum-v">'+manualSt.persons+'명</span></div>';
+  $('m-sumbox').style.display='block';
+}
+window.submitManual=async function(){
+  const r=await api('/api/admin/reservations',{method:'POST',body:{name:manualSt.name,phone:manualSt.phone,date:manualSt.date,hour:manualSt.hour,departure_id:manualSt.dep_id,arrival_id:manualSt.arr_id,persons:manualSt.persons}});
+  if(r.status===201){toast('✅ '+manualSt.name+' 님 신청 접수');goTo('home-admin');}
+  else toast(r.json?.error||'접수 실패');
 };
 
-// 📞 전화신청 (이장님 대리 입력) — 2번 칸의 날짜/시간/출발/도착/인원 사용
-window.guestBook = async () => {
-  const body = {
-    name: document.getElementById("g_name").value,
-    phone: document.getElementById("g_phone").value,
-    date: document.getElementById("date").value,
-    hour: Number(document.getElementById("hour").value),
-    departure_id: Number(document.getElementById("dep").value),
-    arrival_id: Number(document.getElementById("arr").value),
-    persons: Number(document.getElementById("persons").value),
-  };
-  const r = await api("/api/admin/reservations", { method:"POST", body });
-  log(`전화신청 등록  →  HTTP ${r.status}`, r.json);
-  if (r.status === 201) window.adminWaiting();
-};
-
-// 🔀 합치기 — 체크된 대기예약들을 새 시각으로 묶어 확정
-window.mergeSelected = async () => {
-  const ids = [...document.querySelectorAll(".merge-chk:checked")].map(c => Number(c.value));
-  if (ids.length < 2) { alert("합칠 예약을 2건 이상 체크하세요."); return; }
-  const body = {
-    reservation_ids: ids,
-    new_hour: Number(document.getElementById("merge_hour").value),
-    new_minute: Number(document.getElementById("merge_min").value),
-  };
-  const r = await api("/api/admin/reservations/merge", { method:"POST", body });
-  log(`합치기  →  HTTP ${r.status}`, r.json);
-  window.adminWaiting();
-};
+// ─── 시작 ───
+init();
 </script>
 </body>
 </html>
