@@ -105,14 +105,14 @@ async function main() {
   const r5 = await book(token, date, 10, 1, 4, 1);
   check("#5 (1명) 성공 — 마지막 1석 합승", r5.status === 201);
 
-  console.log("\n5) 가용성 재확인 + 4칸 점유 규칙");
+  console.log("\n5) 가용성 재확인 — 1시간 사이클 모델 (0008)");
   const av1 = await api(`/api/availability?date=${date}&origin=cheongsanmyeon`, { token });
   const byHour = Object.fromEntries(av1.json.slots.map((s) => [s.hour, s.remaining]));
-  check("10시 마감(remaining=0)", byHour[10] === 0, `10=${byHour[10]}`);
-  check("9시 마감(remaining=0, 두 차량 출발준비로 막힘)", byHour[9] === 0, `9=${byHour[9]}`);
-  check("11시 마감(remaining=0, 도착측 t+1로 막힘)", byHour[11] === 0, `11=${byHour[11]}`);
-  check("12시 마감(remaining=0, 12시 출발준비=11시 막힘)", byHour[12] === 0, `12=${byHour[12]}`);
-  check("13시 가능(remaining=4, 점유 영향권 벗어남)", byHour[13] === 4, `13=${byHour[13]}`);
+  check("10시 마감(remaining=0, 두 차량 모두 그 시간 운행)", byHour[10] === 0, `10=${byHour[10]}`);
+  check("9시 가능(remaining=4, 1시간 사이클이므로 인접 시간 자유)", byHour[9] === 4, `9=${byHour[9]}`);
+  check("11시 가능(remaining=4)", byHour[11] === 4, `11=${byHour[11]}`);
+  check("12시 가능(remaining=4)", byHour[12] === 4, `12=${byHour[12]}`);
+  check("13시 가능(remaining=4)", byHour[13] === 4, `13=${byHour[13]}`);
 
   console.log("\n6) seats 엔드포인트");
   const seat10 = await api(`/api/availability/seats?date=${date}&hour=10&origin=cheongsanmyeon`, { token });
