@@ -121,8 +121,28 @@ fetch("/api/availability?date=2026-05-31&origin=cheongsanmyeon", {
 });
 ```
 
-### 4.4 토큰 만료
-Supabase access_token = 1시간. 자동 갱신은 supabase-js 클라이언트가 처리.
+### 4.4 토큰 만료 + 자동 로그인 유지
+- Supabase `access_token` = 1시간 유효 / `refresh_token` = 장기 (몇 주~몇 달)
+- 카카오 콜백에서 두 토큰 모두 fragment로 전달됨 (`#access_token=...&refresh_token=...`)
+- **자동 로그인 패턴 (프론트 구현):**
+  ```typescript
+  // 콜백에서 받은 토큰 저장
+  localStorage.setItem("sb-access", access_token);
+  localStorage.setItem("sb-refresh", refresh_token);
+
+  // supabase-js로 세션 복원 (페이지 로드 시)
+  await supabase.auth.setSession({
+    access_token: localStorage.getItem("sb-access")!,
+    refresh_token: localStorage.getItem("sb-refresh")!,
+  });
+  // supabase-js가 access_token 만료 시 refresh_token으로 자동 갱신
+  ```
+- 결과: 어르신은 첫 카카오 로그인 + 전화번호 등록 1번만, 이후 앱 열면 자동 로그인 (몇 달 유지)
+
+### 4.5 온보딩 (전화번호 입력)
+- 카카오 첫 가입자는 `/api/auth/me` 응답에 `needsOnboarding: true`
+- 이때 전화번호 + 이름 입력 화면 표시 → `POST /api/profile` 호출
+- 두 번째 이후 로그인부터는 자동으로 홈 화면으로
 
 ---
 
