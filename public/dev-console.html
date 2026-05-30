@@ -706,6 +706,18 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
   </div>
 </div>
 
+<!-- 푸시 권한 요청 배너 (로그인 후 권한 'default'이면 자동 노출) -->
+<div id="push-permission-banner" style="display:none;position:fixed;left:50%;bottom:20px;transform:translateX(-50%);max-width:340px;width:calc(100vw - 30px);background:var(--primary);color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.25);z-index:9999;font-size:14px;line-height:1.5;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+    <div style="flex:1;">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px;">🔔 알림 받기</div>
+      <div style="color:rgba(255,255,255,.9);font-size:13px;">예약 확정·취소 시 핸드폰으로 바로 알려드려요.</div>
+    </div>
+    <button onclick="acceptPushPermission()" style="background:#fff;color:var(--primary);border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-size:14px;">허용</button>
+    <button onclick="hidePushPrompt()" style="background:none;border:0;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;padding:0 4px;">×</button>
+  </div>
+</div>
+
 </div>
 
 <script type="module">
@@ -843,32 +855,68 @@ function showIosInstallBannerIfNeeded(){
 }
 
 // ─── 웹 푸시 등록 ───
+// iOS Safari는 Notification.requestPermission() 을 자동 호출하면 무시함 — 반드시 사용자 클릭 안에서 호출해야 함.
+// 그래서 로그인 후엔 "준비"만 하고, 권한 요청은 별도 버튼 클릭으로 분리.
 async function registerPushIfPossible(){
   if(!('serviceWorker' in navigator) || !('PushManager' in window)){log('푸시 미지원 브라우저');return;}
-  // iOS는 홈 화면 추가(PWA) 모드에서만 푸시 가능
   if(isIOS() && !isInStandaloneMode()){
     log('iOS는 홈 화면 추가 후 그 아이콘으로 실행해야 알림 받음');
     showIosInstallBannerIfNeeded();
     return;
   }
-  const reg=await navigator.serviceWorker.register('/sw.js');
+  // 서비스 워커 등록 (사용자 클릭 없이도 가능)
+  await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
+  // 권한 상태에 따라 분기
+  if(Notification.permission === 'granted'){
+    // 이미 허용됐으면 자동으로 구독만 시도 (사용자 클릭 불필요)
+    await subscribePushAndSave();
+  } else if(Notification.permission === 'default'){
+    // 아직 안 물어봤으면 "알림 받기" 버튼 노출 (클릭 시 권한 요청)
+    showPushPrompt();
+  }
+  // 'denied'면 사용자가 브라우저 설정에서 직접 풀어야 함 — 안내만
+}
+
+async function subscribePushAndSave(){
+  const reg=await navigator.serviceWorker.ready;
   let sub=await reg.pushManager.getSubscription();
   if(!sub){
-    // 권한 요청
-    const perm=await Notification.requestPermission();
-    if(perm!=='granted'){log('알림 권한 거부됨');return;}
     const r=await fetch('/api/push/public-key').then(r=>r.json());
     if(!r.publicKey){log('VAPID 공개키 없음');return;}
     sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(r.publicKey)});
   }
-  // 서버에 저장 (멱등)
   const sj=sub.toJSON();
   await api('/api/push/subscribe',{method:'POST',body:{
     endpoint:sj.endpoint,
     keys:{p256dh:sj.keys.p256dh,auth:sj.keys.auth},
     user_agent:navigator.userAgent.slice(0,200)
   }});
+  log('푸시 구독 완료');
+}
+
+function showPushPrompt(){
+  const el=document.getElementById('push-permission-banner');
+  if(el) el.style.display='block';
+}
+window.hidePushPrompt=function(){
+  const el=document.getElementById('push-permission-banner');
+  if(el) el.style.display='none';
+};
+
+// 사용자 버튼 클릭 → 권한 요청 → 구독 (사용자 제스처 안에서!)
+window.acceptPushPermission=async function(){
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){toast('알림이 거부됐어요. 설정에서 변경 가능합니다.');return;}
+    await subscribePushAndSave();
+    hidePushPrompt();
+    toast('🔔 알림 받기 활성화 완료');
+  }catch(e){
+    log('권한 요청 실패',e);
+    toast('알림 설정 실패: '+e.message);
+  }
+};
   log('푸시 구독 완료');
 }
 function urlBase64ToUint8Array(base64){
