@@ -505,12 +505,53 @@ node --env-file=.env.local scripts/test-item56.mjs   # 위치 추적
 
 ## 🚀 10. 배포 (Vercel 권장)
 
-1. https://vercel.com → GitHub 연동 → 이 저장소 Import
-2. Environment Variables 등록 (위 4.1 세 가지)
-3. Deploy → `https://daramjwi-taxi.vercel.app` 같은 URL
-4. `git push origin main` 할 때마다 자동 재배포
+### 10.1 백엔드 배포 (이미 끝남)
+- URL: `https://daramjwi-taxi-server.vercel.app`
+- 매번 `git push origin main` 할 때마다 자동 재배포
 
-> 프론트가 별도 레포면 `NEXT_PUBLIC_API_BASE_URL=https://daramjwi-taxi.vercel.app` 환경변수로 백엔드 가리키면 됨.
+### 10.2 프론트 배포 — 권장: **두 앱 분리**
+
+주민 / 이장님은 사용자층·UI 요구가 완전히 다르므로 **앱 두 개로 분리하는 걸 강력 추천**:
+
+```
+백엔드 (1개, 이미 있음)
+└─ daramjwi-taxi-server.vercel.app
+                 ↑   ↑
+        ┌────────┘   └────────┐
+        │                     │
+  주민용 프론트          이장님용 프론트
+  daramjwi-resident      daramjwi-admin
+  (어르신 친화: 큰 글씨·큰 버튼·   (관리자 UI:
+   단순한 흐름)                    캘린더·통계·합치기)
+        │                     │
+        ↓                     ↓
+  다람쥐택시.com         admin.다람쥐택시.com
+```
+
+**왜 분리:**
+- 사용자: 어르신(60~80대) vs 이장님(중장년 관리자) — UX 요구가 완전 다름
+- 화면: 주민은 신청·내 예약 정도, 이장님은 캘린더·통계·합치기·전화신청 등 훨씬 복잡
+- 배포 주기: 이장님 기능 추가가 주민 앱 영향 X (반대도 동일)
+- 보안: 주민 앱에 admin API 호출 코드가 아예 없음 → 공격 표면 축소
+
+**백엔드 변경 0**: 두 앱 모두 같은 `daramjwi-taxi-server.vercel.app` 부르면 됨. Bearer 토큰의 role로 자동 권한 분기 (`is_admin()` 함수 + RLS).
+
+**Vercel 프로젝트:** 무료 Hobby 계정으로 백엔드 1 + 프론트 2 = **총 3개 무료 배포** 가능.
+
+### 10.3 프론트 레포 구조 (선택)
+- **A) 레포 2개 분리** (`daramjwi-taxi-resident`, `daramjwi-taxi-admin`) — 가장 깔끔, 권장
+- **B) 모노레포** (`daramjwi-taxi-client/apps/{resident,admin}`) — 공통 코드 재사용 좋음
+- **C) 한 앱 + URL 분기** (`daramjwi.com/`, `daramjwi.com/admin`) — 빠르지만 분리 장점 못 살림
+
+프론트팀이 선택.
+
+### 10.4 프론트 환경변수 (각 앱)
+```bash
+NEXT_PUBLIC_API_BASE_URL=https://daramjwi-taxi-server.vercel.app
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxxxx
+# SERVICE_ROLE_KEY는 절대 프론트에 두지 않음 (백엔드 전용)
+```
 
 ---
 
