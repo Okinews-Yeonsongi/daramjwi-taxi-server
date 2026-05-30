@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐿️ 다람쥐 택시</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --primary: #E8960A; --primary-light: #FEF3DC; --primary-dark: #B87208; --primary-darker: #7A4C04;
+  --bg: #F4F2ED; --card: #FFFFFF; --text: #111008; --text-muted: #666; --text-hint: #AAA;
+  --border: rgba(0,0,0,0.10); --border-med: rgba(0,0,0,0.16);
+  --green: #1E8A56; --green-light: #DDF4EA; --green-dark: #0F5A34;
+  --red: #CC3030; --red-light: #FDEAEA;
+  --blue: #1A6EC4; --blue-light: #DEEDFB; --purple: #6A4E9A; --purple-light: #EDE6F8;
+  --shadow-sm: 0 2px 10px rgba(0,0,0,0.07); --shadow-md: 0 4px 24px rgba(0,0,0,0.11);
+  --radius-sm: 14px; --radius: 20px; --radius-lg: 26px;
+}
+html, body { height: 100%; background: #232018; display: flex; align-items: center; justify-content: center; font-family: 'Noto Sans KR', sans-serif; }
+.phone-shell { width: 400px; height: 860px; background: var(--bg); border-radius: 48px; overflow: hidden; position: relative; box-shadow: 0 0 0 9px #111008, 0 36px 90px rgba(0,0,0,0.65); display: flex; flex-direction: column; }
+.notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 110px; height: 28px; background: #111008; border-radius: 0 0 16px 16px; z-index: 999; }
+.screen { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+.screen.active { display: flex; }
+.scroll-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.scroll-content::-webkit-scrollbar { display: none; }
+.top-bar { background: var(--primary); padding: 36px 22px 18px; flex-shrink: 0; }
+.app-name { font-size: 24px; font-weight: 900; color: white; }
+.top-bar-sub { font-size: 18px; color: rgba(255,255,255,0.9); font-weight: 700; margin-top: 4px; }
+.top-bar-date { font-size: 15px; color: rgba(255,255,255,0.75); margin-top: 2px; font-weight: 500; }
+.home-notice { background: rgba(255,255,255,0.2); border-radius: 14px; padding: 14px 16px; margin-top: 16px; display: flex; align-items: center; gap: 12px; }
+.home-notice-text { font-size: 17px; color: white; font-weight: 700; }
+.header-back { background: white; padding: 36px 18px 16px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.back-btn { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--border-med); background: var(--bg); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 28px; color: var(--text); flex-shrink: 0; }
+.back-btn:active { background: #E0DDD8; }
+.header-title { font-size: 22px; font-weight: 800; color: var(--text); }
+.step-bar { background: white; padding: 14px 18px 10px; display: flex; align-items: flex-start; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.step-wrap { display: flex; flex-direction: column; align-items: center; }
+.step-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; background: #E0E0E0; color: #999; flex-shrink: 0; }
+.step-dot.done { background: var(--primary); color: white; }
+.step-dot.current { background: var(--primary); color: white; box-shadow: 0 0 0 5px var(--primary-light); }
+.step-line { flex: 1; height: 3px; background: #E0E0E0; margin-top: 16px; }
+.step-line.done { background: var(--primary); }
+.step-label { font-size: 12px; font-weight: 700; color: #BBB; margin-top: 5px; }
+.content-pad { padding: 22px 18px 110px; }
+.section-big { font-size: 24px; font-weight: 900; color: var(--text); margin-bottom: 20px; line-height: 1.3; }
+.section-sm { font-size: 17px; font-weight: 800; color: var(--text-muted); margin-bottom: 12px; }
+.card { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
+.card-title { font-size: 19px; font-weight: 800; color: var(--text); margin-bottom: 16px; }
+.action-bar { position: absolute; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border); padding: 14px 18px 32px; }
+.btn-primary { width: 100%; padding: 20px; border-radius: 18px; border: none; background: var(--primary); font-size: 20px; font-weight: 800; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-family: inherit; transition: transform 0.1s, opacity 0.1s; }
+.btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+.btn-primary:disabled { background: #D8D8D8; color: #999; cursor: default; transform: none; }
+.btn-outline { width: 100%; padding: 20px; border-radius: 18px; border: 2px solid var(--border-med); background: white; font-size: 20px; font-weight: 800; color: var(--text); cursor: pointer; font-family: inherit; }
+.btn-outline:active { background: var(--bg); }
+
+/* 온보딩 */
+#screen-onboard { background: white; }
+
+/* 홈 */
+.home-grid { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
+.home-btn { background: white; border-radius: var(--radius); border: 1px solid var(--border); padding: 22px 20px; display: flex; align-items: center; gap: 18px; cursor: pointer; text-align: left; box-shadow: var(--shadow-sm); width: 100%; transition: transform 0.1s; }
+.home-btn:active { transform: scale(0.98); }
+.home-btn-icon { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 34px; flex-shrink: 0; }
+.home-btn-label { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1.3; }
+.home-btn-sub { font-size: 15px; color: var(--text-muted); margin-top: 4px; }
+
+/* 날짜 선택 */
+.date-list { display: flex; flex-direction: column; gap: 12px; }
+.date-card { background: white; border-radius: var(--radius); border: 3px solid var(--border); padding: 18px 22px; display: flex; align-items: center; gap: 20px; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.15s; }
+.date-card.selected { background: var(--primary); border-color: var(--primary); box-shadow: 0 6px 20px rgba(232,150,10,0.4); }
+.date-card.selected .dc-dow, .date-card.selected .dc-num, .date-card.selected .dc-full { color: white !important; }
+.date-card.weekend .dc-dow { color: var(--red); }
+.date-card.weekend .dc-num { color: var(--red); }
+.dc-left { display: flex; flex-direction: column; align-items: center; min-width: 72px; }
+.dc-dow { font-size: 20px; font-weight: 900; color: var(--text-muted); line-height: 1; }
+.dc-num { font-size: 56px; font-weight: 900; color: var(--text); line-height: 1; letter-spacing: -2px; }
+.dc-right { flex: 1; }
+.dc-full { font-size: 20px; font-weight: 700; color: var(--text); }
+.dc-check { font-size: 28px; color: white; opacity: 0; }
+.date-card.selected .dc-check { opacity: 1; }
+.dc-today-badge { display: inline-block; background: var(--primary); color: white; font-size: 13px; font-weight: 800; padding: 3px 10px; border-radius: 20px; margin-bottom: 4px; }
+.date-card.today-card .dc-dow { display: none; }
+.date-card.today-card .dc-num { font-size: 44px; }
+.selected-date-box { background: var(--primary-light); border-radius: 14px; padding: 16px 18px; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.selected-date-box .text { font-size: 18px; font-weight: 700; color: var(--primary-darker); }
+
+/* 시간 선택 */
+.time-list { display: flex; flex-direction: column; gap: 10px; }
+.time-btn { padding: 20px 22px; border-radius: var(--radius-sm); border: 3px solid var(--border); background: white; font-size: 22px; font-weight: 800; color: var(--text); cursor: pointer; text-align: left; font-family: 'Noto Sans KR', sans-serif; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: space-between; transition: all 0.15s; }
+.time-btn.selected { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 6px 20px rgba(232,150,10,0.35); }
+.time-btn .t-check { font-size: 22px; opacity: 0; }
+.time-btn.selected .t-check { opacity: 1; }
+.time-btn.time-full { background: #F7F7F7; border-color: #E8E8E8; color: #BBB; cursor: default; }
+
+/* 인원 선택 */
+.person-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.person-pick-btn { background: white; border-radius: var(--radius); border: 3px solid var(--border); padding: 24px 14px 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; box-shadow: var(--shadow-sm); transition: all 0.15s; font-family: 'Noto Sans KR', sans-serif; }
+.person-pick-btn.selected { background: var(--primary-light); border-color: var(--primary); box-shadow: 0 6px 20px rgba(232,150,10,0.3); }
+.person-pick-btn.disabled { opacity: 0.35; cursor: default; pointer-events: none; }
+.person-pick-btn:active:not(.disabled) { transform: scale(0.97); }
+.ppb-num { font-size: 30px; font-weight: 900; color: var(--text); }
+.person-pick-btn.selected .ppb-num { color: var(--primary-darker); }
+.ppb-icons { font-size: 26px; line-height: 1.5; text-align: center; }
+.remain-notice { background: var(--red-light); border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; font-size: 16px; font-weight: 700; color: var(--red); display: none; }
+
+/* 출발·도착 */
+.loc-cat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.loc-cat-btn { padding: 22px 14px; border-radius: var(--radius-sm); border: 3px solid var(--border); background: white; font-size: 20px; font-weight: 800; color: var(--text); cursor: pointer; text-align: center; font-family: 'Noto Sans KR', sans-serif; box-shadow: var(--shadow-sm); line-height: 1.4; }
+.loc-cat-btn span { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-top: 5px; }
+.loc-cat-btn.selected { background: var(--primary-light); border-color: var(--primary); color: var(--primary-darker); }
+.loc-cat-btn.selected span { color: var(--primary-dark); }
+.loc-options { display: flex; flex-direction: column; gap: 10px; }
+.loc-opt-btn { padding: 20px; border-radius: var(--radius-sm); border: 3px solid var(--border); background: white; font-size: 20px; font-weight: 700; color: var(--text); cursor: pointer; text-align: left; display: flex; align-items: center; gap: 14px; font-family: 'Noto Sans KR', sans-serif; box-shadow: var(--shadow-sm); transition: all 0.15s; }
+.loc-opt-btn .loc-icon { font-size: 28px; }
+.loc-opt-btn .loc-check { font-size: 22px; color: var(--primary); opacity: 0; }
+.loc-opt-btn.selected { background: var(--primary-light); border-color: var(--primary); color: var(--primary-darker); }
+.loc-opt-btn.selected .loc-check { opacity: 1; }
+.auto-arrive-box { background: var(--green-light); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.auto-arrive-box .aa-icon { font-size: 28px; }
+.auto-arrive-box .aa-text { font-size: 17px; font-weight: 700; color: var(--green-dark); line-height: 1.5; }
+
+/* 오늘 운행 */
+.run-hero { background: var(--primary); padding: 20px 22px 24px; border-radius: 0 0 var(--radius-lg) var(--radius-lg); margin-bottom: 14px; }
+.run-status { font-size: 28px; font-weight: 900; color: white; }
+.run-date { font-size: 18px; color: rgba(255,255,255,0.85); margin-top: 6px; font-weight: 600; }
+.run-item { display: flex; align-items: center; gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--border); }
+.run-item:last-child { border-bottom: none; }
+.run-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+.run-info { flex: 1; }
+.run-time { font-size: 22px; font-weight: 800; color: var(--text); }
+.run-route { font-size: 18px; color: var(--text-muted); margin-top: 5px; }
+.run-badge { font-size: 17px; font-weight: 800; padding: 8px 18px; border-radius: 20px; white-space: nowrap; cursor: pointer; border: none; font-family: inherit; }
+.run-badge.recruit { background: var(--primary); color: white; transition: transform 0.1s, opacity 0.1s; }
+.run-badge.recruit:active { transform: scale(0.95); opacity: 0.85; }
+
+/* 마을 현황 */
+.vstat-card { background: white; border-radius: var(--radius); border: 1px solid var(--border); padding: 18px 16px 16px; box-shadow: var(--shadow-sm); }
+.vstat-label { font-size: 15px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+.vstat-val { font-size: 42px; font-weight: 900; color: var(--text); line-height: 1; }
+.vstat-unit { font-size: 20px; font-weight: 700; }
+
+/* 내 예약 */
+.res-card { background: white; border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+.res-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.res-badge { display: inline-block; padding: 6px 16px; border-radius: 24px; font-size: 15px; font-weight: 800; }
+.badge-waiting { background: var(--primary-light); color: var(--primary-darker); }
+.badge-confirmed { background: var(--green-light); color: var(--green-dark); }
+.res-cancel-btn { background: var(--red-light); color: var(--red); border: none; border-radius: 20px; padding: 10px 22px; font-size: 18px; font-weight: 800; cursor: pointer; font-family: 'Noto Sans KR', sans-serif; }
+.res-cancel-btn:active { opacity: 0.8; }
+.res-route { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.res-detail { font-size: 16px; color: var(--text-muted); line-height: 1.8; }
+
+/* 동승 신청 모달 */
+.modal-bg { position: absolute; inset: 0; background: rgba(17,16,8,0.55); z-index: 200; display: flex; align-items: flex-end; }
+.modal-sheet { background: white; border-radius: 28px 28px 0 0; padding: 0 22px 40px; width: 100%; animation: slideUp 0.28s cubic-bezier(0.34,1.2,0.64,1); }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle { width: 44px; height: 5px; background: #DDD; border-radius: 3px; margin: 18px auto 22px; }
+
+/* 동승 신청 모달 헤더 */
+.ride-modal-header { background: var(--primary); margin: 0 -22px; padding: 18px 22px 20px; border-radius: 28px 28px 0 0; margin-top: -1px; display: flex; align-items: center; gap: 14px; }
+.ride-modal-back { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.25); border: none; font-size: 22px; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ride-modal-title { font-size: 22px; font-weight: 900; color: white; }
+.ride-modal-date { font-size: 15px; color: rgba(255,255,255,0.85); margin-top: 2px; font-weight: 600; }
+
+/* 동승 신청 내용 */
+.ride-modal-ask { font-size: 26px; font-weight: 900; color: var(--text); text-align: center; margin: 22px 0 6px; }
+.ride-modal-sub { font-size: 17px; color: var(--text-muted); text-align: center; margin-bottom: 20px; }
+.ride-info-card { background: var(--bg); border-radius: var(--radius); padding: 6px 4px; margin-bottom: 20px; }
+.ride-info-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.ride-info-row:last-child { border-bottom: none; }
+.ride-info-label { font-size: 18px; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.ride-info-value { font-size: 19px; font-weight: 800; color: var(--text); text-align: right; }
+.ride-person-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; }
+.ride-person-label { font-size: 18px; color: var(--text-muted); font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.ride-person-ctrl { display: flex; align-items: center; gap: 14px; }
+.ride-person-btn { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--border-med); background: white; font-size: 22px; font-weight: 800; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.ride-person-btn:active { background: var(--bg); }
+.ride-person-btn:disabled { opacity: 0.3; cursor: default; }
+.ride-person-num { font-size: 26px; font-weight: 900; color: var(--text); min-width: 32px; text-align: center; }
+.ride-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* 확인 모달 */
+.confirm-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.confirm-row:last-of-type { border-bottom: none; }
+.confirm-label { font-size:19px; color: var(--text-muted); font-weight: 600; }
+.confirm-value { font-size:21px; font-weight: 800; color: var(--text); text-align: right; max-width: 200px; }
+.confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+
+/* 완료 */
+.success-screen { display: none; position: absolute; inset: 0; background: white; z-index: 300; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; text-align: center; }
+.success-screen.show { display: flex; }
+.success-anim { font-size: 90px; animation: pop 0.5s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.success-summary { background: var(--bg); border-radius: var(--radius); padding: 20px; width: 100%; margin-bottom: 28px; text-align: left; }
+.summary-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; }
+.summary-icon { font-size: 22px; }
+.summary-text { font-size: 18px; color: var(--text); font-weight: 700; }
+
+/* 취소 모달 */
+.cancel-modal-wrap { display: none; position: absolute; inset: 0; z-index: 200; }
+</style>
+</head>
+<body>
+<div class="phone-shell">
+<div class="notch"></div>
+
+<!-- 스플래시 -->
+<div id="screen-splash" style="position:absolute;inset:0;background:#F5F5F0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;">
+  <div style="width:160px;height:160px;background:#F5A623;border-radius:36px;display:flex;align-items:center;justify-content:center;flex-direction:column;box-shadow:0 8px 32px rgba(245,166,35,0.4);animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;">
+    <div style="font-size:90px;line-height:1;margin-bottom:-8px;">🐿️</div>
+  </div>
+  <div style="margin-top:22px;font-size:22px;font-weight:900;color:#3A2A00;animation:fadeUp 0.5s 0.2s both;">다람쥐택시</div>
+  <style>
+    @keyframes popIn { from{transform:scale(0.6);opacity:0} to{transform:scale(1);opacity:1} }
+    @keyframes fadeUp { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+  </style>
+</div>
+
+<!-- 온보딩 -->
+<div class="screen" id="screen-onboard" style="background:var(--bg);justify-content:space-between;">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;">
+    <div style="font-size:88px;line-height:1;margin-bottom:20px;">🐿️</div>
+    <div style="font-size:34px;font-weight:900;color:var(--text);margin-bottom:10px;">다람쥐 택시</div>
+    <div style="font-size:18px;color:var(--text-muted);font-weight:600;text-align:center;line-height:1.6;">우리 마을 이동 도우미<br>쉽고 빠르게 탑승 신청하세요</div>
+  </div>
+  <div style="padding:0 22px 52px;">
+    <button onclick="completeOnboard()" style="width:100%;padding:20px 24px;border-radius:14px;border:none;background:#F9E000;color:#3C1E1E;font-size:19px;font-weight:900;cursor:pointer;font-family:'Noto Sans KR',sans-serif;display:flex;align-items:center;justify-content:center;gap:12px;">
+      <svg width="24" height="24" viewBox="0 0 72 72" fill="none"><ellipse cx="36" cy="30" rx="30" ry="26" fill="#3C1E1E"/><path d="M28 52 Q36 64 44 52" fill="#3C1E1E"/><ellipse cx="26" cy="29" rx="3.5" ry="3.5" fill="#F9E000"/><ellipse cx="46" cy="29" rx="3.5" ry="3.5" fill="#F9E000"/><path d="M24 38 Q36 44 48 38" stroke="#F9E000" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>
+      카카오로 로그인
+    </button>
+    <div style="text-align:center;margin-top:18px;font-size:14px;color:var(--text-hint);">로그인 시 서비스 이용약관에 동의하게 됩니다</div>
+  </div>
+</div>
+
+<!-- 홈 -->
+<div class="screen" id="screen-home">
+  <div class="top-bar">
+    <div class="app-name">🐿️ 다람쥐 택시</div>
+    <div class="top-bar-sub" id="home-greeting">안녕하세요, 홍길동 님!</div>
+    <div class="top-bar-date" id="home-date">2026년 5월 22일 금요일</div>
+    <div class="home-notice"><div style="font-size:22px">📢</div><div class="home-notice-text">오전 9시 ~ 오후 6시 정상 운행</div></div>
+  </div>
+  <div class="scroll-content">
+    <div class="home-grid">
+      <button class="home-btn" onclick="goTo('booking-date')">
+        <div class="home-btn-icon" style="background:var(--primary-light)">🚗</div>
+        <div><div class="home-btn-label">탑승 신청하기</div><div class="home-btn-sub">날짜·시간·경로 선택</div></div>
+      </button>
+      <button class="home-btn" onclick="goTo('today-run')">
+        <div class="home-btn-icon" style="background:var(--green-light)">📅</div>
+        <div><div class="home-btn-label">오늘 운행</div><div class="home-btn-sub">오늘 운행 일정 확인</div></div>
+      </button>
+      <button class="home-btn" onclick="goTo('village')">
+        <div class="home-btn-icon" style="background:var(--blue-light)">🏘️</div>
+        <div><div class="home-btn-label">마을 현황</div><div class="home-btn-sub">이용 현황 보기</div></div>
+      </button>
+      <button class="home-btn" onclick="goTo('my-reservations')">
+        <div class="home-btn-icon" style="background:var(--purple-light)">📋</div>
+        <div><div class="home-btn-label">내 예약 현황</div><div class="home-btn-sub">나의 예약 내역 보기</div></div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 탑승신청: 날짜 -->
+<div class="screen" id="screen-booking-date">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('home')">←</button>
+    <span class="header-title">탑승 신청</span>
+  </div>
+  <div id="stepbar-date"></div>
+  <div class="scroll-content">
+    <div class="content-pad">
+      <div class="section-big">언제 탑승하실 건가요?</div>
+      <div class="selected-date-box"><div style="font-size:24px">📅</div><div class="text" id="selected-date-label">날짜를 아래에서 골라주세요</div></div>
+      <div class="date-list" id="date-list"></div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="date-next-btn" onclick="goTo('booking-depart')" disabled>다음 — 출발지 선택 →</button>
+  </div>
+</div>
+
+<!-- 탑승신청: 출발지 -->
+<div class="screen" id="screen-booking-depart">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('booking-date')">←</button>
+    <span class="header-title">탑승 신청</span>
+  </div>
+  <div id="stepbar-depart"></div>
+  <div class="scroll-content">
+    <div class="content-pad">
+      <div class="section-big">출발지를 선택해주세요</div>
+      <div class="loc-cat-row">
+        <button class="loc-cat-btn" id="depart-cat-0" onclick="selectDepartCat(0)">🏡 청산면</button>
+        <button class="loc-cat-btn" id="depart-cat-1" onclick="selectDepartCat(1)">🏘️ 읍내</button>
+      </div>
+      <div class="loc-options" id="depart-options"></div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="depart-next-btn" onclick="goTo('booking-arrive')" disabled>다음 — 도착지 선택 →</button>
+  </div>
+</div>
+
+<!-- 탑승신청: 도착지 -->
+<div class="screen" id="screen-booking-arrive">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('booking-depart')">←</button>
+    <span class="header-title">탑승 신청</span>
+  </div>
+  <div id="stepbar-arrive"></div>
+  <div class="scroll-content">
+    <div class="content-pad">
+      <div class="section-big">도착지를 선택해주세요</div>
+      <div class="auto-arrive-box" id="auto-arrive-box" style="display:none">
+        <div class="aa-icon">✅</div>
+        <div class="aa-text" id="auto-arrive-text"></div>
+      </div>
+      <div class="loc-options" id="arrive-options"></div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="arrive-next-btn" onclick="goTo('booking-time')" disabled>다음 — 시간 선택 →</button>
+  </div>
+</div>
+
+<!-- 탑승신청: 시간 -->
+<div class="screen" id="screen-booking-time">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('booking-arrive')">←</button>
+    <span class="header-title">탑승 신청</span>
+  </div>
+  <div id="stepbar-time"></div>
+  <div class="scroll-content">
+    <div class="content-pad">
+      <div class="section-big">몇 시에 타실 건가요?</div>
+      <div class="section-sm">🌅 오전</div>
+      <div class="time-list" id="time-list-am" style="margin-bottom:24px"></div>
+      <div class="section-sm">🌇 오후</div>
+      <div class="time-list" id="time-list-pm"></div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="time-next-btn" onclick="goTo('booking-persons')" disabled>다음 — 인원 선택 →</button>
+  </div>
+</div>
+
+<!-- 탑승신청: 인원 -->
+<div class="screen" id="screen-booking-persons">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('booking-time')">←</button>
+    <span class="header-title">탑승 신청</span>
+  </div>
+  <div id="stepbar-persons"></div>
+  <div class="scroll-content">
+    <div class="content-pad">
+      <div class="section-big">몇 명이서 타실 건가요?</div>
+      <div class="remain-notice" id="remain-notice"></div>
+      <div class="person-grid">
+        <button class="person-pick-btn" id="ppb-1" onclick="selectPersons(1)"><div class="ppb-num">1명</div><div class="ppb-icons">🧑</div></button>
+        <button class="person-pick-btn" id="ppb-2" onclick="selectPersons(2)"><div class="ppb-num">2명</div><div class="ppb-icons">🧑🧑</div></button>
+        <button class="person-pick-btn" id="ppb-3" onclick="selectPersons(3)"><div class="ppb-num">3명</div><div class="ppb-icons">🧑🧑🧑</div></button>
+        <button class="person-pick-btn" id="ppb-4" onclick="selectPersons(4)"><div class="ppb-num">4명</div><div class="ppb-icons">🧑🧑🧑🧑</div></button>
+      </div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" id="persons-next-btn" onclick="showConfirm()" disabled>신청 확인하기 ✓</button>
+  </div>
+</div>
+
+<!-- 오늘 운행 -->
+<div class="screen" id="screen-today-run">
+  <div style="background:var(--primary);padding:36px 22px 18px;flex-shrink:0;">
+    <div style="font-size:24px;font-weight:900;color:white;">오늘 운행</div>
+  </div>
+  <div class="scroll-content">
+    <div class="run-hero">
+      <div class="run-status">✅ 정상 운행 중</div>
+      <div class="run-date">2026년 5월 22일 금요일</div>
+    </div>
+    <div style="padding:0 18px 110px">
+      <div class="card">
+        <div class="card-title">오늘 운행 일정 (하루 최대 4회)</div>
+        <div class="run-item">
+          <div class="run-dot" style="background:var(--green)"></div>
+          <div class="run-info"><div class="run-time">오전 9:00</div><div class="run-route">청산면 → 읍내</div></div>
+          <div class="run-badge" style="background:var(--green-light);color:var(--green-dark)">완료</div>
+        </div>
+        <div class="run-item">
+          <div class="run-dot" style="background:#AAA"></div>
+          <div class="run-info"><div class="run-time">오전 11:00</div><div class="run-route">읍내 → 청산면</div></div>
+          <div class="run-badge" style="background:#EBEBEB;color:#888">운행중</div>
+        </div>
+        <div class="run-item">
+          <div class="run-dot" style="background:var(--primary)"></div>
+          <div class="run-info"><div class="run-time">오후 2:00</div><div class="run-route">청산면 → 읍내</div></div>
+          <button class="run-badge recruit" onclick="openRideModal('오후 2:00','청산면','읍내','2-pm')">모집중</button>
+        </div>
+        <div class="run-item" style="border-bottom:none">
+          <div class="run-dot" style="background:var(--primary)"></div>
+          <div class="run-info"><div class="run-time">오후 4:00</div><div class="run-route">읍내 → 청산면</div></div>
+          <button class="run-badge recruit" onclick="openRideModal('오후 4:00','읍내','청산면','4-pm')">모집중</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" onclick="goTo('home')">← 홈으로</button>
+  </div>
+</div>
+
+<!-- 마을 현황 -->
+<div class="screen" id="screen-village">
+  <div style="background:var(--primary);padding:36px 22px 20px;flex-shrink:0;display:flex;align-items:center;gap:14px;">
+    <button class="back-btn" style="background:rgba(255,255,255,0.25);border-color:transparent;color:white;" onclick="goTo('home')">←</button>
+    <div>
+      <div style="font-size:26px;font-weight:900;color:white;">마을 운행 현황</div>
+      <div style="font-size:15px;color:rgba(255,255,255,0.85);margin-top:3px;font-weight:600;">2026년 5월 22일 금요일</div>
+    </div>
+  </div>
+  <div class="scroll-content">
+    <div style="padding:20px 18px 110px;">
+      <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:18px;">✅ 이번 달은 이렇게 운행되고 있어요</div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="vstat-card" style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px;">
+          <div style="font-size:19px;font-weight:700;color:var(--text-muted);">이번 달 잔여</div>
+          <div style="font-size:46px;font-weight:900;color:var(--primary);line-height:1;">90 <span style="font-size:22px;font-weight:700;">회</span></div>
+        </div>
+        <div class="vstat-card" style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px;">
+          <div style="font-size:19px;font-weight:700;color:var(--text-muted);">이번 달 탑승자</div>
+          <div style="font-size:46px;font-weight:900;color:var(--primary);line-height:1;">47 <span style="font-size:22px;font-weight:700;">명</span></div>
+        </div>
+        <div class="vstat-card" style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px;">
+          <div style="font-size:19px;font-weight:700;color:var(--text-muted);">오늘 운행</div>
+          <div style="font-size:46px;font-weight:900;color:var(--green);line-height:1;">2 <span style="font-size:22px;font-weight:700;">회</span></div>
+        </div>
+        <div class="vstat-card" style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px;">
+          <div style="font-size:19px;font-weight:700;color:var(--text-muted);">평균 탑승자</div>
+          <div style="font-size:46px;font-weight:900;color:var(--green);line-height:1;">2.1 <span style="font-size:22px;font-weight:700;">명</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" onclick="goTo('home')">← 홈으로</button>
+  </div>
+</div>
+
+<!-- 내 예약 현황 -->
+<div class="screen" id="screen-my-reservations">
+  <div class="header-back">
+    <button class="back-btn" onclick="goTo('home')">←</button>
+    <span class="header-title">내 예약 현황</span>
+  </div>
+  <div class="scroll-content">
+    <div class="content-pad">
+      <div id="my-res-list"></div>
+      <div id="no-res-msg" style="display:none;text-align:center;padding:50px 0;">
+        <div style="font-size:52px;margin-bottom:14px">📭</div>
+        <div style="font-size:20px;font-weight:700;color:var(--text-muted)">예약 내역이 없어요</div>
+      </div>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn-primary" onclick="goTo('home')">← 홈으로</button>
+  </div>
+</div>
+
+<!-- ══ 동승 신청 모달 ══ -->
+<div id="ride-modal" style="display:none;position:absolute;inset:0;z-index:200;">
+  <div class="modal-bg" onclick="closeRideModal()">
+    <div class="modal-sheet" onclick="event.stopPropagation()" style="padding:0 0 36px;">
+      <!-- 헤더 -->
+      <div class="ride-modal-header">
+        <button class="ride-modal-back" onclick="closeRideModal()">←</button>
+        <div>
+          <div class="ride-modal-title">오늘 운행 일정</div>
+          <div class="ride-modal-date">2026년 5월 22일 금요일</div>
+        </div>
+      </div>
+      <div style="padding:0 22px;">
+        <div class="ride-modal-ask">동승 신청할까요?</div>
+        <div class="ride-modal-sub">하루 최대 4회 운행</div>
+        <!-- 정보 카드 -->
+        <div class="ride-info-card">
+          <div class="ride-info-row">
+            <span class="ride-info-label">🗓️ 탑승 날짜</span>
+            <span class="ride-info-value">5월 22일 금요일</span>
+          </div>
+          <div class="ride-info-row">
+            <span class="ride-info-label">🕐 탑승 시간</span>
+            <span class="ride-info-value" id="rm-time">—</span>
+          </div>
+          <div class="ride-info-row" style="border-bottom:none">
+            <span class="ride-info-label">🚩 출발 위치</span>
+            <span class="ride-info-value" id="rm-depart">—</span>
+          </div>
+          <div class="ride-info-row" style="border-top:1px solid var(--border)">
+            <span class="ride-info-label">📍 도착 위치</span>
+            <span class="ride-info-value" id="rm-arrive">—</span>
+          </div>
+          <!-- 인원 조절 -->
+          <div class="ride-person-row" style="border-top:1px solid var(--border)">
+            <span class="ride-person-label">👥 탑승 인원</span>
+            <div class="ride-person-ctrl">
+              <button class="ride-person-btn" id="rm-minus" onclick="changeRidePersons(-1)">−</button>
+              <span class="ride-person-num" id="rm-persons">1</span>
+              <button class="ride-person-btn" id="rm-plus" onclick="changeRidePersons(1)">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="ride-btns">
+          <button class="btn-outline" style="font-size:18px;padding:18px" onclick="closeRideModal()">홈으로 돌아가기</button>
+          <button class="btn-primary" style="font-size:18px;padding:18px" onclick="submitRideModal()">신청하기 ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 일반 확인 모달 -->
+<div id="confirm-modal" style="display:none;position:absolute;inset:0;z-index:200;">
+  <div class="modal-bg">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div style="font-size:28px;font-weight:900;color:var(--text);margin-bottom:6px;">신청 내용 확인</div>
+      <div style="font-size:19px;color:var(--text-muted);margin-bottom:20px;">아래 내용으로 탑승을 신청할까요?</div>
+      <div id="confirm-rows"></div>
+      <div class="confirm-btns">
+        <button class="btn-outline" style="font-size:22px;" onclick="closeConfirm()">수정하기</button>
+        <button class="btn-primary" style="font-size:22px;" onclick="submitBooking()">신청하기 ✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 취소 모달 -->
+<div class="cancel-modal-wrap" id="cancel-modal">
+  <div class="modal-bg">
+    <div class="modal-sheet" onclick="event.stopPropagation()">
+      <div class="modal-handle"></div>
+      <div style="font-size:24px;font-weight:900;color:var(--text);margin-bottom:6px;">예약을 취소할까요?</div>
+      <div style="font-size:16px;color:var(--text-muted);margin-bottom:20px;">이 예약이 취소됩니다.</div>
+      <div style="background:var(--bg);border-radius:14px;padding:16px 18px;margin-bottom:20px;" id="cancel-modal-info"></div>
+      <div class="confirm-btns">
+        <button class="btn-outline" onclick="closeCancelModal()">돌아가기</button>
+        <button class="btn-primary" style="background:var(--red)" onclick="confirmCancel()">취소하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 완료 -->
+<div class="success-screen" id="success-screen">
+  <div class="success-anim" style="font-size:110px;">🎉</div>
+  <div style="font-size:34px;font-weight:900;color:var(--text);margin:18px 0 10px;">탑승 신청 완료!</div>
+  <div style="font-size:21px;color:var(--text-muted);line-height:1.7;margin-bottom:28px;">신청이 접수되었어요.<br>담당자 확인 후 연락드릴게요.</div>
+  <div class="success-summary" id="success-summary"></div>
+  <button class="btn-primary" style="width:100%" onclick="goHome()">홈으로 돌아가기</button>
+</div>
+
+</div>
+<script>
+setTimeout(() => {
+  const splash = document.getElementById('screen-splash');
+  splash.style.transition = 'opacity 0.4s';
+  splash.style.opacity = '0';
+  setTimeout(() => { splash.style.display='none'; document.getElementById('screen-onboard').classList.add('active'); }, 400);
+}, 1800);
+
+const DAYS = ['일','월','화','수','목','금','토'];
+const TIMES_AM = ['오전 9시','오전 10시','오전 11시'];
+const TIMES_PM = ['오후 12시','오후 1시','오후 2시','오후 3시','오후 4시','오후 5시','오후 6시'];
+const ALL_TIMES = [...TIMES_AM, ...TIMES_PM];
+const MAX_PER_SLOT = 4;
+const LOCS = {
+  0: [{icon:'🏛️',label:'백운리 마을회관'},{icon:'🏢',label:'청산면사무소'},{icon:'🏫',label:'청산고등학교'},{icon:'🛕',label:'백운사'}],
+  1: [{icon:'🏥',label:'옥천성모병원'},{icon:'🏛️',label:'옥천군청'},{icon:'🛒',label:'시장'}]
+};
+const ARRIVE_LOCS = { 0: LOCS[1], 1: LOCS[0] };
+const CAT_NAMES = ['청산면','읍내'];
+const STEPS = ['날짜','시간','인원','출발지','도착지'];
+const STEP_SCREENS = ['booking-date','booking-depart','booking-arrive','booking-time','booking-persons'];
+const STEP_BAR_IDS = ['stepbar-date','stepbar-time','stepbar-persons','stepbar-depart','stepbar-arrive'];
+
+let state = { name:'홍길동', selectedDate:null, selectedTime:null, persons:0, depart:{cat:null,loc:null}, arrive:{cat:null,loc:null} };
+let myReservations = [
+  {id:1,status:'confirmed',departLoc:'마을회관',arriveLoc:'옥천성모병원',date:'5월 14일 (목요일)',time:'오전 10시',persons:2,dateKey:'5-14',timeIdx:1},
+  {id:2,status:'waiting',departLoc:'우리집',arriveLoc:'옥천군청',date:'5월 20일 (수요일)',time:'오후 2시',persons:1,dateKey:'5-20',timeIdx:5},
+];
+let cancelTargetId = null;
+const bookingData = {'5-22':{0:1},'5-23':{0:3,1:2,2:4,3:1},'5-24':{0:4,1:4,2:4,3:4},'5-25':{0:2,1:3},'5-26':{0:1},'5-27':{0:3},'5-28':{0:4,1:2,2:1},'5-29':{},'5-30':{0:2,1:1},'5-31':{0:4,1:2}};
+
+// ── 동승 신청 모달 상태 ──
+let rideModal = { time:'', depart:'', arrive:'', persons:1, slotKey:'', maxPersons:4 };
+
+function openRideModal(time, depart, arrive, slotKey) {
+  rideModal.time = time; rideModal.depart = depart; rideModal.arrive = arrive;
+  rideModal.slotKey = slotKey; rideModal.persons = 1;
+  // 잔여 좌석 계산 (오늘=2026-5-22 기준)
+  const tIdx = slotKey === '2-pm' ? 5 : 7; // 오후 2시=index5, 오후 4시=index7
+  const data = bookingData['5-22'] || {};
+  rideModal.maxPersons = Math.max(1, MAX_PER_SLOT - (data[tIdx] || 0));
+  document.getElementById('rm-time').textContent = time;
+  document.getElementById('rm-depart').textContent = depart;
+  document.getElementById('rm-arrive').textContent = arrive;
+  document.getElementById('rm-persons').textContent = 1;
+  updateRidePersonBtns();
+  document.getElementById('ride-modal').style.display = 'block';
+}
+
+function closeRideModal() { document.getElementById('ride-modal').style.display='none'; }
+
+function changeRidePersons(delta) {
+  rideModal.persons = Math.min(rideModal.maxPersons, Math.max(1, rideModal.persons + delta));
+  document.getElementById('rm-persons').textContent = rideModal.persons;
+  updateRidePersonBtns();
+}
+
+function updateRidePersonBtns() {
+  document.getElementById('rm-minus').disabled = rideModal.persons <= 1;
+  document.getElementById('rm-plus').disabled  = rideModal.persons >= rideModal.maxPersons;
+}
+
+function submitRideModal() {
+  closeRideModal();
+  const tIdx = rideModal.slotKey === '2-pm' ? 5 : 7;
+  if (!bookingData['5-22']) bookingData['5-22'] = {};
+  bookingData['5-22'][tIdx] = Math.min(MAX_PER_SLOT, (bookingData['5-22'][tIdx]||0) + rideModal.persons);
+  const dateStr = '5월 22일 (금요일)';
+  document.getElementById('success-summary').innerHTML = `
+    <div class="summary-row"><span class="summary-icon">📅</span><span class="summary-text">${dateStr} ${rideModal.time}</span></div>
+    <div class="summary-row"><span class="summary-icon">👥</span><span class="summary-text">${rideModal.persons}명</span></div>
+    <div class="summary-row"><span class="summary-icon">🚏</span><span class="summary-text">${rideModal.depart} → ${rideModal.arrive}</span></div>
+  `;
+  myReservations.unshift({ id:Date.now(), status:'waiting', departLoc:rideModal.depart, arriveLoc:rideModal.arrive, date:dateStr, time:rideModal.time, persons:rideModal.persons, dateKey:'5-22', timeIdx:tIdx });
+  document.getElementById('success-screen').classList.add('show');
+}
+
+function dateKey(d) { return `${d.getMonth()+1}-${d.getDate()}`; }
+function getRemainSeats(d, tIdx) { const data = bookingData[dateKey(d)]||{}; return MAX_PER_SLOT-(data[tIdx]||0); }
+
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el = document.getElementById('screen-'+id);
+  if (el) el.classList.add('active');
+  if (id==='booking-date') initDateList();
+  if (id==='booking-time') renderTimes();
+  if (id==='booking-persons') renderPersons();
+  if (id==='booking-depart') renderDepart();
+  if (id==='booking-arrive') renderArrive();
+  if (id==='my-reservations') renderMyReservations();
+  const si = STEP_SCREENS.indexOf(id);
+  if (si>=0) renderStepBar(STEP_BAR_IDS[si], si);
+}
+
+function renderStepBar(containerId, currentIdx) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  let html = '<div class="step-bar">';
+  STEPS.forEach((label,i) => {
+    if (i>0) html += `<div class="step-line${i<=currentIdx?' done':''}"></div>`;
+    const cls = i<currentIdx?'done':i===currentIdx?'current':'';
+    html += `<div class="step-wrap"><div class="step-dot ${cls}">${i<currentIdx?'✓':i+1}</div><div class="step-label">${label}</div></div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function completeOnboard() {
+  const now = new Date();
+  document.getElementById('home-greeting').textContent = `안녕하세요, ${state.name} 님!`;
+  document.getElementById('home-date').textContent = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${DAYS[now.getDay()]}요일`;
+  goTo('home');
+}
+
+function initDateList() {
+  const el = document.getElementById('date-list');
+  const base = new Date(2026,4,22);
+  let html = '';
+  for (let i=0; i<14; i++) {
+    const d = new Date(base); d.setDate(base.getDate()+i);
+    const dow = d.getDay(); const isSun=dow===0,isSat=dow===6,isToday=i===0;
+    const isSel = state.selectedDate && state.selectedDate.toDateString()===d.toDateString();
+    const dayColor = isSel?'white':isSun?'var(--red)':isSat?'var(--blue)':'var(--text)';
+    const leftHtml = isToday
+      ? `<div class="dc-today-badge">오늘</div><div class="dc-num" style="font-size:44px;color:${dayColor}">${d.getDate()}</div>`
+      : `<div class="dc-dow" style="color:${dayColor}">${DAYS[dow]}요일</div><div class="dc-num" style="color:${dayColor}">${d.getDate()}</div>`;
+    const fullLabel = isToday ? `오늘 · ${d.getMonth()+1}월 ${d.getDate()}일` : `${d.getMonth()+1}월 ${d.getDate()}일`;
+    html += `<div class="date-card${isSel?' selected':''}${isToday?' today-card':''}" onclick="selectDate(${d.getTime()})">
+      <div class="dc-left">${leftHtml}</div><div class="dc-right"><div class="dc-full">${fullLabel}</div></div>
+      <div class="dc-check">✓</div></div>`;
+  }
+  el.innerHTML = html;
+}
+
+function selectDate(ts) {
+  state.selectedDate=new Date(ts); state.selectedTime=null; state.persons=0;
+  const d=state.selectedDate;
+  document.getElementById('selected-date-label').textContent=`✅ ${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]}요일) 선택됨`;
+  document.getElementById('date-next-btn').disabled=false;
+  initDateList();
+}
+
+function renderTimes() {
+  const renderList=(times,id)=>{
+    document.getElementById(id).innerHTML=times.map(t=>{
+      const tIdx=ALL_TIMES.indexOf(t);
+      const isFull=state.selectedDate&&getRemainSeats(state.selectedDate,tIdx)<=0;
+      const isSel=state.selectedTime===t;
+      return `<button class="time-btn${isSel?' selected':''}${isFull?' time-full':''}" onclick="${isFull?'void(0)':`selectTime('${t}')`}">
+        <span style="flex:1;text-align:left">${t}</span>
+        ${isFull?'<span style="font-size:15px;color:#BBB">마감</span>':''}
+        <span class="t-check">✓</span></button>`;
+    }).join('');
+  };
+  renderList(TIMES_AM,'time-list-am'); renderList(TIMES_PM,'time-list-pm');
+}
+
+function selectTime(t) { state.selectedTime=t; state.persons=0; document.getElementById('time-next-btn').disabled=false; renderTimes(); }
+
+function renderPersons() {
+  let maxAllow=4;
+  if (state.selectedDate&&state.selectedTime) { const tIdx=ALL_TIMES.indexOf(state.selectedTime); maxAllow=getRemainSeats(state.selectedDate,tIdx); }
+  const notice=document.getElementById('remain-notice');
+  if (maxAllow<4) { notice.style.display='block'; notice.textContent=`⚠️ 이 시간대는 ${maxAllow}명까지만 탑승 신청할 수 있어요.`; } else { notice.style.display='none'; }
+  [1,2,3,4].forEach(i=>{ const btn=document.getElementById(`ppb-${i}`); if(!btn)return; btn.className='person-pick-btn'+(i===state.persons?' selected':'')+(i>maxAllow?' disabled':''); });
+  document.getElementById('persons-next-btn').disabled=state.persons===0;
+}
+
+function selectPersons(n) {
+  let maxAllow=4;
+  if (state.selectedDate&&state.selectedTime) { const tIdx=ALL_TIMES.indexOf(state.selectedTime); maxAllow=getRemainSeats(state.selectedDate,tIdx); }
+  if (n>maxAllow) return;
+  state.persons=n; renderPersons(); document.getElementById('persons-next-btn').disabled=false;
+}
+
+function renderDepart() {
+  [0,1].forEach(i=>{ const btn=document.getElementById(`depart-cat-${i}`); if(btn) btn.className='loc-cat-btn'+(state.depart.cat===i?' selected':''); });
+  const optEl=document.getElementById('depart-options'); if(!optEl)return;
+  if (state.depart.cat===null){optEl.innerHTML='';return;}
+  optEl.innerHTML=LOCS[state.depart.cat].map(l=>`<button class="loc-opt-btn${state.depart.loc===l.label?' selected':''}" onclick="selectDepartLoc('${l.label}')">
+    <span class="loc-icon">${l.icon}</span><span style="flex:1">${l.label}</span><span class="loc-check">✓</span></button>`).join('');
+  document.getElementById('depart-next-btn').disabled=!state.depart.loc;
+}
+
+function selectDepartCat(cat) { state.depart.cat=cat; state.depart.loc=null; state.arrive.cat=cat===0?1:0; state.arrive.loc=null; renderDepart(); }
+function selectDepartLoc(label) { state.depart.loc=label; document.getElementById('depart-next-btn').disabled=false; renderDepart(); }
+
+function renderArrive() {
+  const autoBox=document.getElementById('auto-arrive-box'),autoText=document.getElementById('auto-arrive-text'),optEl=document.getElementById('arrive-options');
+  if (state.depart.cat!==null) {
+    const arrivedCat=state.depart.cat===0?1:0; state.arrive.cat=arrivedCat;
+    autoBox.style.display='flex'; autoText.textContent=`${CAT_NAMES[state.depart.cat]} 출발 → ${CAT_NAMES[arrivedCat]} 도착. 구체적인 장소를 선택해주세요.`;
+    optEl.innerHTML=ARRIVE_LOCS[state.depart.cat].map(l=>`<button class="loc-opt-btn${state.arrive.loc===l.label?' selected':''}" onclick="selectArriveLoc('${l.label}')">
+      <span class="loc-icon">${l.icon}</span><span style="flex:1">${l.label}</span><span class="loc-check">✓</span></button>`).join('');
+  } else { autoBox.style.display='none'; optEl.innerHTML=''; }
+  document.getElementById('arrive-next-btn').disabled=!state.arrive.loc;
+}
+
+function selectArriveLoc(label) { state.arrive.loc=label; document.getElementById('arrive-next-btn').disabled=false; renderArrive(); }
+
+function showConfirm() {
+  const d=state.selectedDate;
+  const dateStr=d?`${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]}요일)`:'-';
+  document.getElementById('confirm-rows').innerHTML=[
+    ['📅 탑승 날짜',dateStr],['🕐 탑승 시간',state.selectedTime||'-'],
+    ['👥 인원',`${state.persons}명`],['🚏 출발지',state.depart.loc||'-'],['📍 도착지',state.arrive.loc||'-'],
+  ].map(r=>`<div class="confirm-row"><span class="confirm-label">${r[0]}</span><span class="confirm-value">${r[1]}</span></div>`).join('');
+  document.getElementById('confirm-modal').style.display='block';
+}
+
+function closeConfirm() { document.getElementById('confirm-modal').style.display='none'; }
+
+function submitBooking() {
+  closeConfirm();
+  const d=state.selectedDate; const dateStr=d?`${d.getMonth()+1}월 ${d.getDate()}일 (${DAYS[d.getDay()]}요일)`:'-';
+  if (d&&state.selectedTime) { const key=dateKey(d); const tIdx=ALL_TIMES.indexOf(state.selectedTime); if(!bookingData[key])bookingData[key]={}; bookingData[key][tIdx]=Math.min(MAX_PER_SLOT,(bookingData[key][tIdx]||0)+state.persons); }
+  document.getElementById('success-summary').innerHTML=`
+    <div class="summary-row"><span class="summary-icon">📅</span><span class="summary-text">${dateStr} ${state.selectedTime}</span></div>
+    <div class="summary-row"><span class="summary-icon">👥</span><span class="summary-text">${state.persons}명</span></div>
+    <div class="summary-row"><span class="summary-icon">🚏</span><span class="summary-text">${state.depart.loc} → ${state.arrive.loc}</span></div>`;
+  const tIdx=ALL_TIMES.indexOf(state.selectedTime);
+  myReservations.unshift({id:Date.now(),status:'waiting',departLoc:state.depart.loc,arriveLoc:state.arrive.loc,date:dateStr,time:state.selectedTime,persons:state.persons,dateKey:dateKey(d),timeIdx:tIdx});
+  document.getElementById('success-screen').classList.add('show');
+}
+
+function goHome() {
+  document.getElementById('success-screen').classList.remove('show');
+  state.selectedDate=null;state.selectedTime=null;state.persons=0;state.depart={cat:null,loc:null};state.arrive={cat:null,loc:null};
+  goTo('home');
+}
+
+function renderMyReservations() {
+  const list=document.getElementById('my-res-list'),noMsg=document.getElementById('no-res-msg');
+  if (myReservations.length===0){list.innerHTML='';noMsg.style.display='block';return;}
+  noMsg.style.display='none';
+  list.innerHTML=myReservations.map(r=>`<div class="res-card" id="res-card-${r.id}">
+    <div class="res-card-top"><span class="res-badge ${r.status==='confirmed'?'badge-confirmed':'badge-waiting'}">${r.status==='confirmed'?'확정':'대기중'}</span>
+    <button class="res-cancel-btn" onclick="openCancelModal(${r.id})">취소하기</button></div>
+    <div class="res-route">${r.departLoc} → ${r.arriveLoc}</div>
+    <div class="res-detail">📅 ${r.date} ${r.time}<br>👥 ${r.persons}명</div></div>`).join('');
+}
+
+function openCancelModal(id) {
+  const r=myReservations.find(x=>x.id===id); if(!r)return;
+  cancelTargetId=id;
+  document.getElementById('cancel-modal-info').innerHTML=`<div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px">${r.departLoc} → ${r.arriveLoc}</div><div style="font-size:15px;color:var(--text-muted)">📅 ${r.date} ${r.time} · 👥 ${r.persons}명</div>`;
+  document.getElementById('cancel-modal').style.display='block';
+}
+
+function closeCancelModal() { document.getElementById('cancel-modal').style.display='none'; cancelTargetId=null; }
+
+function confirmCancel() {
+  if (cancelTargetId===null) return;
+  const r=myReservations.find(x=>x.id===cancelTargetId);
+  if (r&&bookingData[r.dateKey]) bookingData[r.dateKey][r.timeIdx]=Math.max(0,(bookingData[r.dateKey][r.timeIdx]||0)-r.persons);
+  myReservations=myReservations.filter(x=>x.id!==cancelTargetId);
+  closeCancelModal(); renderMyReservations();
+}
+</script>
+</body>
+</html>

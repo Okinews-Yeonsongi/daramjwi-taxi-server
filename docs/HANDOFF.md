@@ -180,11 +180,13 @@ docs/
 
 현재 `public/dev-console.html`는 빠르게 만든 임시 도구. **사장님이 그동안 구체적으로 정리한 요구사항을 다 담은 콘솔로 새로 만들어야 함.**
 
-### 🎨 ⭐ 디자인·UX 참고 — 기존 프로토타입 HTML 보기 (필독)
-- **이장님 화면 프로토타입**: `docs/prototypes/admin-prototype.html` (모바일 폰 셸 UI + 합치기 다이얼 + 6단계 전화신청 + 주간 캘린더까지 완성된 형태)
-- **주민용 프로토타입**: (예정) `docs/prototypes/resident-prototype.html`
-- 새 테스트 콘솔의 **UI/색감/배치/플로우는 이 프로토타입과 똑같이** 가되, **데이터·동작은 우리 백엔드 API**(아래 11.2/11.3에 정리)로 갈아끼울 것.
-- 프로토타입에 하드코딩된 `reqs` 더미 배열 → `/api/admin/reservations`, `/api/runs/today`, `/api/admin/stats` 등 실제 호출로 교체.
+### 🎨 ⭐ 디자인·UX 참고 — 기존 프로토타입 HTML (필독)
+- **주민용 프로토타입**: `docs/prototypes/resident-prototype.html` (모바일 폰 셸 + 5단계 step bar + 신청 흐름)
+- **이장님 화면 프로토타입**: `docs/prototypes/admin-prototype.html` (모바일 폰 셸 + 합치기 다이얼 + 6단계 전화신청 + 주간 캘린더)
+- 새 테스트 콘솔의 **UI/색감/배치/플로우는 이 두 프로토타입을 그대로 따를 것**. 색상 토큰·폰트 크기·둥근 모서리·터치 영역까지 모두 보존.
+- **데이터·동작은 우리 백엔드 API**(아래 11.2/11.3 + `docs/API.md`)로 갈아끼울 것.
+- 두 프로토타입에 하드코딩된 더미 배열(`reqs` 등) → 실제 API 호출 (예: `/api/reservations/me`, `/api/admin/reservations`, `/api/runs/today`, `/api/admin/stats` 등)
+- 한 화면에 **주민용·이장님용 토글** 또는 **로그인 후 role에 따라 자동 라우팅** 권장.
 
 ### 11.1 로그인
 - ❌ 카카오 로그인 버튼은 **숨기거나 "사업자등록 후 사용 가능"으로 비활성** 표시 (개인앱이라 KOE205)
