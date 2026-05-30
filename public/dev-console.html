@@ -10,6 +10,7 @@
 <link rel="icon" href="/icon-192.png">
 <!-- iOS PWA (홈 화면 추가 시 풀스크린 + 웹 푸시 가능) -->
 <link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="다람쥐택시">
@@ -917,8 +918,7 @@ window.acceptPushPermission=async function(){
     toast('알림 설정 실패: '+e.message);
   }
 };
-  log('푸시 구독 완료');
-}
+
 function urlBase64ToUint8Array(base64){
   const padding='='.repeat((4-base64.length%4)%4);
   const b64=(base64+padding).replace(/-/g,'+').replace(/_/g,'/');
