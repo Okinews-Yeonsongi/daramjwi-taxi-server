@@ -1037,9 +1037,11 @@ window.exitEdit=function(){editMode=false;selIds=[];renderWaiting();};
 
 function showConfirm(q,sub,okLbl,okCls,cb){
   $('conf-q').textContent=q;$('conf-sub').textContent=sub||'';confirmCb=cb;
-  $('conf-btns').innerHTML='<button class="btn bo2" onclick="closeM(\'mod-confirm\')">닫기</button><button class="btn '+okCls+'" onclick="confirmCb&&confirmCb();closeM(\'mod-confirm\')">'+okLbl+'</button>';
+  // confirmCb는 모듈 스코프 → 인라인 onclick에서 직접 못 부름. window.runConfirm 래퍼로 우회.
+  $('conf-btns').innerHTML='<button class="btn bo2" onclick="closeM(\'mod-confirm\')">닫기</button><button class="btn '+okCls+'" onclick="runConfirm()">'+okLbl+'</button>';
   $('mod-confirm').classList.add('on');
 }
+window.runConfirm=function(){const cb=confirmCb;confirmCb=null;closeM('mod-confirm');if(cb)cb();};
 window.adminConfirm=function(id){
   const x=waitingCache.find(r=>r.id===id);if(!x)return;
   showConfirm('확정하시겠습니까?',x.resident?.name+' 님 · '+fmtDate(x.reservation_date)+' '+(x.time_label||SLOTS.find(s=>s.hour===x.hour)?.label||''),'확정 알림 발송','bg2',async()=>{
