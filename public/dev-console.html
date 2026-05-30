@@ -295,8 +295,8 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
 .success-summary{background:var(--bg);border-radius:var(--radius);padding:18px;width:100%;margin:18px 0 22px;text-align:left;}
 .summary-row{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:16px;color:var(--text);font-weight:700;}
 
-/* 로그인 */
-#screen-login{display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;padding:30px;height:100%;}
+/* 로그인 — display는 .screen.active에서 처리, 여기선 정렬만 */
+#screen-login{background:#fff;padding:30px;align-items:center;justify-content:center;}
 #screen-login .logo{font-size:80px;}
 #screen-login h1{font-size:26px;font-weight:900;margin:10px 0;}
 #screen-login p{color:var(--text-muted);font-size:14px;text-align:center;margin-bottom:24px;}
