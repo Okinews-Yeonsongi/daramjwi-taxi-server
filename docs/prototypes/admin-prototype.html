@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🐿️ 다람쥐 택시 - 이장님</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --primary:#E8960A;--primary-light:#FEF3DC;--primary-dark:#B87208;--primary-darker:#7A4C04;
+  --bg:#F4F2ED;--card:#fff;--text:#111008;--text-muted:#666;--text-hint:#AAA;
+  --border:rgba(0,0,0,0.10);--border-med:rgba(0,0,0,0.16);
+  --green:#1E8A56;--green-light:#DDF4EA;--green-dark:#0F5A34;
+  --red:#CC3030;--red-light:#FDEAEA;
+  --shadow-sm:0 2px 10px rgba(0,0,0,0.07);
+  --radius-sm:14px;--radius:20px;--radius-lg:26px;
+  --yellow:#F5A623;
+}
+html,body{height:100%;background:#232018;display:flex;align-items:center;justify-content:center;font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;}
+.phone-shell{width:min(400px,100vw);height:min(860px,100dvh);background:var(--bg);border-radius:clamp(0px,5vw,48px);overflow:hidden;position:relative;box-shadow:0 0 0 9px #111008,0 36px 90px rgba(0,0,0,0.65);display:flex;flex-direction:column;}
+@media(max-width:420px){.phone-shell{border-radius:0;box-shadow:none;width:100vw;height:100dvh;}html,body{background:var(--bg);}}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:110px;height:28px;background:#111008;border-radius:0 0 16px 16px;z-index:999;}
+@media(max-width:420px){.notch{display:none;}}
+
+/* 스플래시 */
+#splash{position:absolute;inset:0;background:#F5F5F0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;}
+.splash-icon{width:clamp(120px,35vw,160px);height:clamp(120px,35vw,160px);background:#F5A623;border-radius:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 32px rgba(245,166,35,0.4);animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;font-size:clamp(60px,20vw,90px);line-height:1;}
+.splash-title{margin-top:22px;font-size:clamp(18px,5vw,22px);font-weight:900;color:#3A2A00;animation:fadeUp 0.5s 0.2s both;}
+@keyframes popIn{from{transform:scale(0.6);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes fadeUp{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* 페이지 */
+.pg{display:none;flex-direction:column;height:100%;overflow:hidden;}
+.pg.on{display:flex;}
+.scroller{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.scroller::-webkit-scrollbar{display:none;}
+
+/* 홈 헤더 */
+.home-header{background:#F5A623;padding:clamp(28px,8vw,36px) clamp(16px,5vw,22px) clamp(14px,4vw,18px);flex-shrink:0;}
+.home-header-top{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.home-logo-box{width:clamp(36px,10vw,44px);height:clamp(36px,10vw,44px);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:clamp(22px,6vw,28px);line-height:1;flex-shrink:0;}
+.home-app-name{font-size:clamp(16px,4.5vw,20px);font-weight:900;color:#fff;}
+.home-greeting{font-size:clamp(18px,5vw,22px);font-weight:800;color:#fff;margin-bottom:2px;}
+.home-date{font-size:clamp(12px,3.5vw,15px);color:rgba(255,255,255,0.8);font-weight:500;}
+
+/* 서브 헤더 (화살표 백버튼용) */
+.sub-ph{background:#fff;padding:clamp(28px,8vw,36px) clamp(14px,4vw,18px) clamp(10px,3vw,14px);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:14px;}
+.back-arrow{width:44px;height:44px;border-radius:50%;border:2px solid var(--border-med);background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:22px;color:var(--text);flex-shrink:0;}
+.back-arrow:active{background:#E0DDD8;}
+.sub-ph-title{font-size:clamp(16px,4.5vw,20px);font-weight:900;color:var(--text);}
+
+/* 일반 서브 헤더 (백버튼 없는 버전) */
+.sub-ph-plain{background:#fff;padding:clamp(28px,8vw,36px) clamp(14px,4vw,18px) clamp(10px,3vw,14px);border-bottom:1px solid var(--border);flex-shrink:0;}
+
+/* 홈 바디 */
+.home-body{padding:clamp(12px,3.5vw,16px) clamp(12px,4vw,16px) clamp(20px,6vw,28px);}
+.cta{width:100%;padding:clamp(13px,4vw,17px);background:var(--yellow);color:#fff;border:none;border-radius:var(--radius-sm);font-size:clamp(14px,4vw,17px);font-weight:900;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;box-shadow:0 4px 16px rgba(245,166,35,0.4);}
+.cta:active{opacity:.85;}
+.home-boxes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.home-box{border-radius:var(--radius-sm);padding:clamp(10px,3vw,14px) clamp(12px,3.5vw,16px);display:flex;flex-direction:column;gap:3px;border:1.5px solid;}
+.home-box-g{background:var(--green-light);border-color:rgba(26,122,74,0.3);}
+.home-box-r{background:var(--red-light);border-color:rgba(196,43,43,0.3);}
+.home-box-label{font-size:clamp(10px,2.8vw,12px);font-weight:700;}
+.home-box-g .home-box-label{color:var(--green-dark);}
+.home-box-r .home-box-label{color:var(--red);}
+.home-box-val{font-size:clamp(26px,8vw,34px);font-weight:900;line-height:1.1;}
+.home-box-g .home-box-val{color:var(--green);}
+.home-box-r .home-box-val{color:var(--red);}
+.home-box-unit{font-size:clamp(11px,3vw,13px);font-weight:700;}
+.home-box-g .home-box-unit{color:var(--green-dark);}
+.home-box-r .home-box-unit{color:var(--red);}
+.menu-grid{display:flex;flex-direction:column;gap:10px;}
+.menu-btn{background:#fff;border:1.5px solid var(--border-med);border-radius:var(--radius);padding:clamp(18px,5vw,24px) clamp(16px,4.5vw,20px);display:flex;align-items:center;gap:16px;cursor:pointer;font-family:inherit;text-align:left;box-shadow:var(--shadow-sm);width:100%;}
+.menu-btn:active{opacity:.8;}
+.menu-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;}
+.menu-icon-r{background:var(--red-light);}
+.menu-icon-b{background:#EEF4FF;}
+.menu-icon-g{background:var(--green-light);}
+.menu-text{flex:1;min-width:0;}
+.menu-title{font-size:clamp(18px,5vw,22px);font-weight:900;margin-bottom:4px;}
+.menu-sub{font-size:clamp(13px,3.5vw,15px);color:var(--text-muted);}
+.menu-cnt{font-size:clamp(22px,6.5vw,28px);font-weight:900;color:var(--red);flex-shrink:0;}
+.menu-arr{font-size:24px;color:var(--text-hint);flex-shrink:0;}
+
+/* 탭 */
+.tabs{display:flex;border-bottom:2px solid var(--border);background:#fff;position:sticky;top:0;z-index:40;}
+.tab{flex:1;padding:clamp(9px,2.5vw,11px) 4px;text-align:center;font-size:clamp(13px,3.5vw,15px);font-weight:700;color:var(--text-muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;}
+.tab.on{color:var(--primary);border-bottom-color:var(--primary);}
+
+/* 대기 리스트 카드 */
+.wait-card{background:#fff;border-radius:var(--radius);border:1.5px solid var(--border-med);margin:10px 14px;overflow:hidden;box-shadow:var(--shadow-sm);}
+.wait-item{padding:18px 18px 14px;border-bottom:1px solid var(--border);cursor:pointer;}
+.wait-item:last-child{border-bottom:none;}
+.wait-item:active{background:#FAFAF8;}
+.wait-item-sel{background:var(--primary-light)!important;}
+.wi-date-badge{font-size:13px;font-weight:800;color:var(--primary-darker);background:var(--primary-light);display:inline-block;padding:4px 12px;border-radius:8px;margin-bottom:10px;}
+.wi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;flex-wrap:wrap;}
+.wi-name{font-size:clamp(18px,5vw,21px);font-weight:900;color:var(--text);}
+.wi-route{font-size:clamp(15px,4vw,17px);color:var(--text-muted);font-weight:600;margin-bottom:10px;line-height:1.5;}
+.wi-bottom{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.wi-src{font-size:13px;background:#E8F0FE;color:#1A6EC4;padding:4px 10px;border-radius:9px;font-weight:700;}
+.wi-usage{font-size:13px;background:#F0F0F0;color:#666;padding:4px 10px;border-radius:9px;font-weight:700;}
+.wi-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.wi-btn{padding:12px 20px;border-radius:10px;font-size:clamp(14px,4vw,16px);font-weight:800;cursor:pointer;border:none;font-family:inherit;}
+.wi-btn-g{background:var(--green);color:#fff;}
+.wi-btn-r{background:var(--red);color:#fff;}
+.wi-btn-o{background:#fff;color:var(--text);border:1.5px solid var(--border-med);}
+.wi-btn-g:active,.wi-btn-r:active,.wi-btn-o:active{opacity:.75;}
+
+/* 편집 바 */
+.edit-bar{background:#fff;padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
+.edit-bar-info{font-size:clamp(11px,3vw,13px);font-weight:700;color:var(--text-muted);}
+.edit-bar-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.check-circle{width:26px;height:26px;border-radius:50%;border:2px solid var(--border-med);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;}
+.check-circle.on{background:var(--primary);border-color:var(--primary);}
+.check-circle.on::after{content:'✓';color:#fff;font-size:13px;font-weight:900;}
+
+/* 배지 */
+.badge{display:inline-block;padding:5px 12px;border-radius:20px;font-size:clamp(13px,3.5vw,15px);font-weight:700;white-space:nowrap;}
+.bw{background:var(--primary-light);color:var(--primary-darker);}
+.bc{background:var(--green-light);color:var(--green-dark);}
+.bd2cls{background:#F0F0F0;color:#888;}
+.bx{background:var(--red-light);color:var(--red);}
+
+/* 일반 버튼 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:8px 13px;border-radius:9px;font-size:clamp(12px,3.2vw,13px);font-weight:700;cursor:pointer;border:none;font-family:inherit;white-space:nowrap;}
+.btn:active{opacity:.75;}
+.bg2{background:var(--green);color:#fff;}
+.br2{background:var(--red);color:#fff;}
+.bo2{background:#fff;color:var(--text);border:1.5px solid var(--border-med);}
+.by2{background:var(--yellow);color:#fff;}
+
+/* 하단 홈버튼 */
+.bottom-bar{background:#fff;border-top:1px solid var(--border);padding:clamp(10px,3vw,14px) clamp(14px,4vw,18px) clamp(14px,4vw,20px);flex-shrink:0;}
+.btn-home{width:100%;padding:clamp(13px,4vw,17px);background:var(--yellow);color:#fff;border:none;border-radius:var(--radius-sm);font-size:clamp(14px,4vw,17px);font-weight:900;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-home:active{opacity:.85;}
+
+/* 오늘 운행 카드 */
+.today-card{background:#fff;border-radius:var(--radius);border:1.5px solid var(--border-med);margin:10px 14px;overflow:hidden;box-shadow:var(--shadow-sm);cursor:pointer;}
+.today-card:active{opacity:.85;}
+.today-card-inner{padding:18px 18px 14px;}
+.tc-date-badge{font-size:13px;font-weight:800;color:var(--primary-darker);background:var(--primary-light);display:inline-block;padding:4px 12px;border-radius:8px;margin-bottom:10px;}
+.tc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;flex-wrap:wrap;}
+.tc-name{font-size:clamp(18px,5vw,21px);font-weight:900;color:var(--text);}
+.tc-route{font-size:clamp(15px,4vw,17px);color:var(--text-muted);font-weight:600;line-height:1.5;}
+
+/* ====================== 전화신청 ====================== */
+.manual-header{background:#fff;padding:clamp(28px,8vw,36px) clamp(14px,4vw,18px) clamp(10px,3vw,14px);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:14px;}
+.mb{padding:clamp(12px,3.5vw,16px) clamp(12px,4vw,15px) clamp(20px,6vw,32px);}
+.sth{display:flex;align-items:center;margin-bottom:20px;}
+.sd{width:28px;height:28px;border-radius:50%;background:#E0E0E0;color:#AAA;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sd.on{background:var(--primary);color:#fff;}
+.sd.dn{background:var(--green);color:#fff;}
+.stl{flex:1;height:3px;background:#E0E0E0;}
+.stl.dn{background:var(--green);}
+.ms{animation:fu .18s ease;}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.mt{font-size:clamp(18px,5vw,22px);font-weight:900;margin-bottom:4px;}
+.msub{font-size:clamp(13px,3.5vw,15px);color:var(--text-muted);margin-bottom:16px;}
+.fi{width:100%;padding:clamp(14px,4vw,16px) 16px;border-radius:14px;border:2px solid var(--border-med);font-size:clamp(17px,5vw,20px);font-family:inherit;color:var(--text);background:#fff;outline:none;}
+.fi:focus{border-color:var(--primary);}
+
+/* 날짜 카드 (사용자 HTML 스타일 동일하게) */
+.date-card-big{background:#fff;border-radius:var(--radius);border:3px solid var(--border);padding:18px 22px;display:flex;align-items:center;gap:18px;cursor:pointer;box-shadow:var(--shadow-sm);margin-bottom:12px;transition:all .15s;}
+.date-card-big.on{background:var(--primary);border-color:var(--primary);box-shadow:0 6px 20px rgba(232,150,10,0.4);}
+.date-card-big:active{opacity:.85;}
+.dc-left{display:flex;flex-direction:column;align-items:center;min-width:68px;}
+.dc-dow{font-size:18px;font-weight:900;color:var(--text-muted);line-height:1;}
+.dc-num{font-size:52px;font-weight:900;color:var(--text);line-height:1;letter-spacing:-2px;}
+.date-card-big.on .dc-dow,.date-card-big.on .dc-num,.date-card-big.on .dc-full,.date-card-big.on .dc-check{color:#fff!important;}
+.date-card-big.wknd .dc-dow{color:var(--red);}
+.date-card-big.wknd .dc-num{color:var(--red);}
+.dc-right{flex:1;}
+.dc-full{font-size:18px;font-weight:700;color:var(--text);}
+.dc-today-badge{display:inline-block;background:var(--primary);color:#fff;font-size:14px;font-weight:800;padding:4px 12px;border-radius:20px;margin-bottom:5px;}
+.date-card-big.on .dc-today-badge{background:rgba(255,255,255,0.35);color:#fff;}
+.dc-check{font-size:26px;color:#fff;opacity:0;}
+.date-card-big.on .dc-check{opacity:1;}
+
+/* 방향·출발지·도착지 큰 카드 버튼 */
+.dir-grid-big{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.dir-btn-big{padding:22px 10px;border-radius:var(--radius);border:3px solid var(--border);background:#fff;font-size:clamp(16px,4.5vw,18px);font-weight:800;cursor:pointer;font-family:inherit;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;box-shadow:var(--shadow-sm);transition:all .15s;}
+.dir-btn-big:active{opacity:.8;}
+.dir-btn-big.on{border-color:var(--primary);background:var(--primary);color:#fff;}
+.dir-em-big{font-size:36px;line-height:1;}
+.dir-label-big{font-size:clamp(16px,4.5vw,19px);font-weight:900;}
+.dir-sub-big{font-size:13px;color:var(--text-muted);font-weight:600;}
+.dir-btn-big.on .dir-sub-big{color:rgba(255,255,255,.8);}
+
+.loc-opt-big{padding:20px 18px;border-radius:var(--radius);border:3px solid var(--border);background:#fff;display:flex;align-items:center;gap:14px;cursor:pointer;font-family:inherit;box-shadow:var(--shadow-sm);margin-bottom:10px;transition:all .15s;width:100%;}
+.loc-opt-big.on{background:var(--primary-light);border-color:var(--primary);}
+.loc-opt-big:active{opacity:.8;}
+.loc-em{font-size:28px;flex-shrink:0;}
+.loc-label{font-size:clamp(18px,5vw,22px);font-weight:800;color:var(--text);flex:1;}
+.loc-opt-big.on .loc-label{color:var(--primary-darker);}
+.loc-check{font-size:22px;color:var(--primary);opacity:0;flex-shrink:0;}
+.loc-opt-big.on .loc-check{opacity:1;}
+
+.lbl-big{font-size:clamp(14px,4vw,16px);font-weight:700;color:var(--text-muted);margin:16px 0 10px;display:block;}
+
+/* 시간 큰 카드 버튼 */
+.time-card{padding:20px 22px;border-radius:var(--radius);border:3px solid var(--border);background:#fff;cursor:pointer;font-family:inherit;box-shadow:var(--shadow-sm);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;transition:all .15s;width:100%;}
+.time-card.on{background:var(--primary);border-color:var(--primary);box-shadow:0 6px 20px rgba(232,150,10,0.35);}
+.time-card:active{opacity:.8;}
+.time-card-full{background:#F7F7F7;border-color:#E8E8E8;cursor:default;}
+.time-card-full:active{opacity:1;}
+.time-main{font-size:clamp(20px,5.5vw,24px);font-weight:900;color:var(--text);}
+.time-card.on .time-main{color:#fff;}
+.time-card-full .time-main{color:#BBB;}
+.time-full-txt{font-size:14px;font-weight:700;color:#BBB;}
+.time-check{font-size:22px;opacity:0;}
+.time-card.on .time-check{opacity:1;color:#fff;}
+.time-section-label{font-size:clamp(13px,3.8vw,15px);font-weight:800;color:var(--text-muted);margin:16px 0 8px;}
+
+/* 인원 */
+.pr-row{display:flex;gap:8px;flex-wrap:wrap;}
+.pb{flex:1;min-width:60px;padding:clamp(14px,4vw,18px) 4px;border-radius:var(--radius);border:3px solid var(--border);background:#fff;font-size:clamp(18px,5vw,22px);font-weight:900;cursor:pointer;font-family:inherit;text-align:center;box-shadow:var(--shadow-sm);}
+.pb.on{border-color:var(--primary);background:var(--primary);color:#fff;}
+.pb-full{flex:1;min-width:60px;padding:clamp(14px,4vw,18px) 4px;border-radius:var(--radius);border:3px solid var(--border);background:#F5F5F5;font-size:clamp(14px,4vw,16px);font-weight:700;font-family:inherit;text-align:center;color:var(--text-hint);cursor:not-allowed;opacity:.55;}
+.prs-warn{background:var(--red-light);border:1.5px solid rgba(196,43,43,0.35);border-radius:14px;padding:14px 16px;margin-bottom:14px;font-size:clamp(14px,4vw,16px);font-weight:700;color:var(--red);display:flex;align-items:center;gap:8px;}
+
+.db-btn{display:flex;align-items:center;justify-content:space-between;padding:clamp(10px,3vw,13px) 15px;border-radius:12px;border:2px solid var(--border);background:#fff;cursor:pointer;font-family:inherit;width:100%;margin-bottom:8px;flex-wrap:wrap;gap:4px;}
+.db-btn.on{border-color:var(--primary);background:var(--primary-light);}
+.db-label{font-size:clamp(13px,3.8vw,14px);font-weight:800;}
+
+.sumbox{background:var(--primary-light);border-radius:12px;padding:14px;margin-top:14px;}
+.sum-t{font-size:clamp(11px,3vw,12px);font-weight:700;color:var(--primary-darker);margin-bottom:8px;}
+.sum-r{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.07);font-size:clamp(13px,3.5vw,15px);}
+.sum-r:last-child{border:none;}
+.sum-k{color:var(--primary-darker);}
+.sum-v{font-weight:800;color:var(--primary-darker);}
+
+.sf2{display:flex;gap:8px;margin-top:18px;}
+.bb{padding:clamp(13px,4vw,16px) 18px;border-radius:14px;background:#fff;color:var(--text-muted);font-size:clamp(15px,4vw,17px);font-weight:700;border:2px solid var(--border-med);cursor:pointer;font-family:inherit;flex-shrink:0;}
+.bn{flex:1;padding:clamp(13px,4vw,16px);border-radius:14px;background:var(--primary);color:#fff;font-size:clamp(16px,4.5vw,18px);font-weight:900;border:none;cursor:pointer;font-family:inherit;}
+
+/* 주간 캘린더 */
+.week-cal{padding:clamp(10px,3vw,14px);}
+.week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.week-nav-btn{background:none;border:1.5px solid var(--border-med);border-radius:9px;padding:6px clamp(8px,3vw,14px);font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;}
+.week-label{font-size:clamp(15px,4.5vw,19px);font-weight:900;}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:14px;}
+.wday-col{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.wday-h{font-size:clamp(9px,2.5vw,11px);font-weight:700;color:var(--text-muted);margin-bottom:2px;}
+.wday-cell{width:100%;min-height:clamp(52px,14vw,68px);border-radius:10px;border:1.5px solid var(--border);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:6px 2px 4px;cursor:pointer;}
+.wday-cell:active{opacity:.7;}
+.wday-cell.today{border:2px solid var(--primary);background:var(--primary-light);}
+.wday-cell.sel{background:var(--primary);border-color:var(--primary);}
+.wday-num{font-size:clamp(18px,5.5vw,24px);font-weight:900;line-height:1;}
+.wday-cell.sel .wday-num{color:#fff;}
+.wday-cell.today .wday-num{color:var(--primary-darker);}
+.wday-cnt{font-size:clamp(9px,2.5vw,11px);font-weight:700;color:var(--green);margin-top:2px;}
+.wday-cell.sel .wday-cnt{color:rgba(255,255,255,.85);}
+.wday-dots{display:flex;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:center;}
+.dot{width:4px;height:4px;border-radius:50%;background:var(--primary);}
+.week-detail{background:#fff;border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-sm);overflow:hidden;}
+.week-detail-hd{padding:11px 14px;background:var(--primary-light);font-size:clamp(12px,3.2vw,13px);font-weight:800;color:var(--primary-darker);}
+
+/* 모달 */
+.moverlay{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:400;display:none;align-items:flex-end;justify-content:center;}
+.moverlay.on{display:flex;}
+.msheet{background:#fff;border-radius:20px 20px 0 0;padding:18px 18px 32px;width:100%;max-height:90%;overflow-y:auto;animation:su .22s ease;}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhandle{width:36px;height:4px;background:#DDD;border-radius:2px;margin:0 auto 16px;}
+.mtit{font-size:clamp(15px,4.5vw,18px);font-weight:900;margin-bottom:3px;}
+.msub2{font-size:clamp(11px,3vw,13px);color:var(--text-muted);margin-bottom:12px;}
+.mrow{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);}
+.mrow:last-of-type{border:none;}
+.mk{font-size:clamp(11px,3vw,13px);color:var(--text-muted);}
+.mv{font-size:clamp(11px,3vw,13px);font-weight:700;text-align:right;}
+.mft{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+.mft .btn{flex:1;padding:13px 8px;font-size:clamp(12px,3.5vw,14px);min-width:70px;}
+.confirm-box{background:var(--bg);border-radius:13px;padding:18px;margin-bottom:4px;text-align:center;}
+.confirm-q{font-size:clamp(15px,4.5vw,18px);font-weight:900;margin-bottom:6px;}
+.confirm-sub{font-size:clamp(11px,3vw,13px);color:var(--text-muted);}
+
+/* 다이얼 */
+.dial-section{margin:14px 0;}
+.dial-section-label{font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;text-align:center;}
+.dial-row{display:flex;align-items:center;justify-content:center;gap:12px;}
+.dial-colon{font-size:28px;font-weight:900;color:var(--text);line-height:1;}
+.dial-col{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.dial-col-label{font-size:11px;font-weight:700;color:var(--text-muted);}
+.dial-arrow-btn{background:var(--primary-light);border:none;border-radius:9px;width:44px;height:36px;font-size:18px;cursor:pointer;color:var(--primary-darker);font-weight:900;display:flex;align-items:center;justify-content:center;}
+.dial-arrow-btn:active{opacity:.6;}
+.dial-display{width:80px;height:56px;background:#fff;border:2px solid var(--primary);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:var(--primary);}
+.dial-selected-preview{text-align:center;font-size:20px;font-weight:900;color:var(--primary);margin:10px 0 2px;}
+
+.toast{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:#1C1A14;color:#fff;padding:11px 20px;border-radius:10px;font-size:clamp(12px,3.5vw,14px);font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.on{opacity:1;}
+.empty{padding:36px 16px;text-align:center;color:var(--text-hint);font-size:clamp(13px,3.5vw,15px);}
+.sec-pad{padding:12px 14px;}
+</style>
+</head>
+<body>
+<div class="phone-shell">
+<div class="notch"></div>
+
+<!-- 스플래시 -->
+<div id="splash">
+  <div class="splash-icon">🐿️</div>
+  <div class="splash-title">다람쥐택시</div>
+</div>
+
+<!-- 홈 -->
+<div class="pg on" id="pg-home">
+  <div class="home-header">
+    <div class="home-header-top">
+      <div class="home-logo-box">🐿️</div>
+      <span class="home-app-name">다람쥐택시</span>
+    </div>
+    <div class="home-greeting">안녕하세요!</div>
+    <div class="home-date" id="today-str"></div>
+  </div>
+  <div class="scroller">
+    <div class="home-body">
+      <button class="cta" onclick="goPage('manual')">📞 전화 신청 바로가기 ➔</button>
+      <div class="home-boxes">
+        <div class="home-box home-box-g">
+          <div class="home-box-label">오늘 잔여 운행</div>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <div class="home-box-val" id="home-remain">—</div>
+            <div class="home-box-unit">회</div>
+          </div>
+        </div>
+        <div class="home-box home-box-r">
+          <div class="home-box-label">대기 신청</div>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <div class="home-box-val" id="home-wait">—</div>
+            <div class="home-box-unit">건</div>
+          </div>
+        </div>
+      </div>
+      <div class="menu-grid">
+        <button class="menu-btn" onclick="goPage('waiting')">
+          <div class="menu-icon menu-icon-r">⏳</div>
+          <div class="menu-text"><div class="menu-title">대기 신청 현황</div><div class="menu-sub">확정·취소 처리</div></div>
+          <div class="menu-cnt" id="home-wait-cnt2">—</div>
+          <div class="menu-arr">›</div>
+        </button>
+        <button class="menu-btn" onclick="goPage('today')">
+          <div class="menu-icon menu-icon-b">📅</div>
+          <div class="menu-text"><div class="menu-title">오늘 운행</div><div class="menu-sub" id="home-today-sub">오늘 확정·완료된 운행</div></div>
+          <div class="menu-arr">›</div>
+        </button>
+        <button class="menu-btn" onclick="goPage('monthly')">
+          <div class="menu-icon menu-icon-g">🗓</div>
+          <div class="menu-text"><div class="menu-title">월별 운행 현황</div><div class="menu-sub">주간 캘린더로 현황 보기</div></div>
+          <div class="menu-arr">›</div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 대기 신청 현황 -->
+<div class="pg" id="pg-waiting">
+  <div class="sub-ph-plain" style="padding:clamp(28px,8vw,36px) clamp(14px,4vw,18px) clamp(10px,3vw,14px);"><div style="font-size:clamp(16px,4.5vw,20px);font-weight:900;color:var(--text);">⏳ 대기 신청 현황</div></div>
+  <div class="tabs">
+    <div class="tab on" id="wtab-w" onclick="switchWTab('w')">대기</div>
+    <div class="tab" id="wtab-c" onclick="switchWTab('c')">확정</div>
+    <div class="tab" id="wtab-x" onclick="switchWTab('x')">취소</div>
+  </div>
+  <div class="scroller" id="wait-tab-body"></div>
+  <div class="bottom-bar"><button class="btn-home" onclick="exitEdit();goPage('home')">🏠 홈으로</button></div>
+</div>
+
+<!-- 오늘 운행 -->
+<div class="pg" id="pg-today">
+  <div class="sub-ph-plain" style="padding:clamp(28px,8vw,36px) clamp(14px,4vw,18px) clamp(10px,3vw,14px);"><div style="font-size:clamp(16px,4.5vw,20px);font-weight:900;color:var(--text);">📅 오늘 운행</div></div>
+  <div class="scroller">
+    <div id="today-run-list" style="padding:4px 0 16px;"></div>
+  </div>
+  <div class="bottom-bar"><button class="btn-home" onclick="goPage('home')">🏠 홈으로</button></div>
+</div>
+
+<!-- 월별 운행 현황 -->
+<div class="pg" id="pg-monthly">
+  <div class="sub-ph-plain" style="padding:clamp(28px,8vw,36px) clamp(14px,4vw,18px) clamp(10px,3vw,14px);"><div style="font-size:clamp(16px,4.5vw,20px);font-weight:900;color:var(--text);">🗓 월별 운행 현황</div></div>
+  <div class="scroller">
+    <div class="week-cal">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;" id="monthly-stats"></div>
+      <div class="week-nav">
+        <button class="week-nav-btn" onclick="moveWeek(-1)">◀</button>
+        <div class="week-label" id="week-label"></div>
+        <button class="week-nav-btn" onclick="moveWeek(1)">▶</button>
+      </div>
+      <div class="week-grid" id="week-grid"></div>
+      <div class="week-detail" id="week-detail" style="display:none;">
+        <div class="week-detail-hd" id="week-detail-hd"></div>
+        <div id="week-detail-list"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-bar"><button class="btn-home" onclick="goPage('home')">🏠 홈으로</button></div>
+</div>
+
+<!-- 전화 신청 -->
+<div class="pg" id="pg-manual">
+  <div class="manual-header">
+    <button class="back-arrow" onclick="goPage('home')">←</button>
+    <div style="font-size:clamp(16px,4.5vw,20px);font-weight:900;color:var(--text);">📞 전화 신청 입력</div>
+  </div>
+  <div class="scroller">
+    <div class="mb">
+      <div class="sth">
+        <div class="sd on" id="sd1">1</div><div class="stl" id="stl1"></div>
+        <div class="sd" id="sd2">2</div><div class="stl" id="stl2"></div>
+        <div class="sd" id="sd3">3</div><div class="stl" id="stl3"></div>
+        <div class="sd" id="sd4">4</div><div class="stl" id="stl4"></div>
+        <div class="sd" id="sd5">5</div><div class="stl" id="stl5"></div>
+        <div class="sd" id="sd6">6</div>
+      </div>
+
+      <!-- 스텝1: 이름·연락처 -->
+      <div class="ms" id="ms1">
+        <div class="mt">누가 전화하셨나요?</div>
+        <div class="msub">이름과 연락처를 입력해주세요</div>
+        <input class="fi" id="m-name" placeholder="이름" style="margin-bottom:12px;">
+        <input class="fi" id="m-phone" placeholder="연락처 (010-0000-0000)" type="tel">
+        <div class="sf2"><button class="bn" onclick="mStep(2)">다음 →</button></div>
+      </div>
+
+      <!-- 스텝2: 날짜 -->
+      <div class="ms" id="ms2" style="display:none;">
+        <div class="mt">언제 타실 건가요?</div>
+        <div class="msub">날짜를 선택해주세요</div>
+        <div id="date-list"></div>
+        <div class="sf2"><button class="bb" onclick="mStep(1)">← 이전</button><button class="bn" onclick="mStep(3)">다음 →</button></div>
+      </div>
+
+      <!-- 스텝3: 방향·출발지 -->
+      <div class="ms" id="ms3" style="display:none;">
+        <div class="mt">어느 방향인가요?</div>
+        <div class="msub">방향을 먼저 선택해주세요</div>
+        <div class="dir-grid-big">
+          <button class="dir-btn-big" id="dir-cs" onclick="pickDir('청산→읍내')">
+            <div class="dir-em-big">🏡</div>
+            <div class="dir-label-big">청산 → 읍내</div>
+            <div class="dir-sub-big">마을에서 출발</div>
+          </button>
+          <button class="dir-btn-big" id="dir-sc" onclick="pickDir('읍내→청산')">
+            <div class="dir-em-big">🏥</div>
+            <div class="dir-label-big">읍내 → 청산</div>
+            <div class="dir-sub-big">읍내에서 출발</div>
+          </button>
+        </div>
+        <div id="dep-wrap" style="display:none;">
+          <span class="lbl-big" id="dep-lbl">출발지 선택</span>
+          <div id="dep-list"></div>
+        </div>
+        <div class="sf2"><button class="bb" onclick="mStep(2)">← 이전</button><button class="bn" onclick="mStep(4)">다음 →</button></div>
+      </div>
+
+      <!-- 스텝4: 도착지 -->
+      <div class="ms" id="ms4" style="display:none;">
+        <div class="mt">도착지를 선택하세요</div>
+        <div class="msub" id="arr-msub"></div>
+        <div id="arr-list"></div>
+        <div class="sf2"><button class="bb" onclick="mStep(3)">← 이전</button><button class="bn" onclick="mStep(5)">다음 →</button></div>
+      </div>
+
+      <!-- 스텝5: 시간 -->
+      <div class="ms" id="ms5" style="display:none;">
+        <div class="mt">몇 시에 타실 건가요?</div>
+        <div class="msub">운행 시간을 선택해주세요</div>
+        <div id="time-list"></div>
+        <div class="sf2"><button class="bb" onclick="mStep(4)">← 이전</button><button class="bn" onclick="mStep(6)">다음 →</button></div>
+      </div>
+
+      <!-- 스텝6: 인원 -->
+      <div class="ms" id="ms6" style="display:none;">
+        <div class="mt">몇 명이 타시나요?</div>
+        <div class="msub">탑승 인원을 선택해주세요</div>
+        <div id="prs-warn" style="display:none;" class="prs-warn"></div>
+        <div class="pr-row" id="prs-list"></div>
+        <div class="sumbox" id="sumbox" style="display:none;"><div class="sum-t">✅ 신청 내용 확인</div><div id="sum-body"></div></div>
+        <div class="sf2"><button class="bb" onclick="mStep(5)">← 이전</button><button class="bn" style="background:var(--green);" onclick="submitM()">✓ 접수하기</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /phone-shell -->
+
+<!-- 합치기 모달 -->
+<div class="moverlay" id="mod-merge">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mtit">예약 합치기</div>
+    <div class="msub2" id="merge-sub"></div>
+    <div id="merge-preview"></div>
+    <div class="dial-section">
+      <div class="dial-section-label">합쳐진 예약 시간 선택</div>
+      <div class="dial-row">
+        <div class="dial-col">
+          <div class="dial-col-label">시</div>
+          <button class="dial-arrow-btn" onclick="dialChange('h',-1)">▲</button>
+          <div class="dial-display" id="dial-h">9</div>
+          <button class="dial-arrow-btn" onclick="dialChange('h',1)">▼</button>
+        </div>
+        <div class="dial-colon">:</div>
+        <div class="dial-col">
+          <div class="dial-col-label">분</div>
+          <button class="dial-arrow-btn" onclick="dialChange('m',-1)">▲</button>
+          <div class="dial-display" id="dial-m">00</div>
+          <button class="dial-arrow-btn" onclick="dialChange('m',1)">▼</button>
+        </div>
+      </div>
+      <div class="dial-selected-preview" id="dial-preview"></div>
+    </div>
+    <div class="mft">
+      <button class="btn bo2" onclick="closeM('mod-merge')">취소</button>
+      <button class="btn bg2" onclick="doMerge()">✓ 합치기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 확인 공용 모달 -->
+<div class="moverlay" id="mod-confirm">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="confirm-box">
+      <div class="confirm-q" id="conf-q"></div>
+      <div class="confirm-sub" id="conf-sub"></div>
+    </div>
+    <div class="mft" id="conf-btns"></div>
+  </div>
+</div>
+
+<!-- 상세 모달 -->
+<div class="moverlay" id="mod-req">
+  <div class="msheet">
+    <div class="mhandle"></div>
+    <div class="mtit" id="mrt"></div>
+    <div class="msub2" id="mrs"></div>
+    <div id="mrb"></div>
+    <div class="mft" id="mft-btns"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var DAYS=['일','월','화','수','목','금','토'];
+var TIMES=['오전 9시','오전 10시','오전 11시','오후 12시','오후 1시','오후 2시','오후 3시','오후 4시','오후 5시','오후 6시'];
+var LOCS_C=[{em:'🏛️',lb:'백운리 마을회관'},{em:'🏫',lb:'청산고등학교'},{em:'🛕',lb:'백운사'},{em:'🏢',lb:'청산면사무소'}];
+var LOCS_E=[{em:'🏥',lb:'옥천성모병원'},{em:'🏛️',lb:'옥천군청'},{em:'🛒',lb:'시장'}];
+var TODAY='2026-05-25';
+var MAX_SEAT=4;
+
+var reqs=[
+  {id:1,date:'2026-05-25',time:'오전 9시',name:'김순례',phone:'010-1234-5678',dep:'백운리 마을회관',arr:'옥천성모병원',dir:'청산→읍내',p:2,st:'done',src:'앱'},
+  {id:2,date:'2026-05-25',time:'오전 11시',name:'이정자',phone:'010-3456-7890',dep:'옥천성모병원',arr:'백운리 마을회관',dir:'읍내→청산',p:1,st:'confirmed',src:'앱'},
+  {id:3,date:'2026-05-25',time:'오후 2시',name:'박영철',phone:'010-2345-6789',dep:'백운리 마을회관',arr:'시장',dir:'청산→읍내',p:3,st:'waiting',src:'앱'},
+  {id:4,date:'2026-05-25',time:'오후 4시',name:'최봉수',phone:'010-4567-8901',dep:'청산면사무소',arr:'백운리 마을회관',dir:'읍내→청산',p:1,st:'waiting',src:'전화'},
+  {id:5,date:'2026-05-27',time:'오전 10시',name:'정말순',phone:'010-5678-9012',dep:'백운리 마을회관',arr:'시장',dir:'청산→읍내',p:2,st:'waiting',src:'앱'},
+  {id:6,date:'2026-05-28',time:'오후 1시',name:'윤복순',phone:'010-7890-1234',dep:'백운리 마을회관',arr:'옥천성모병원',dir:'청산→읍내',p:1,st:'waiting',src:'앱'},
+  {id:7,date:'2026-05-20',time:'오전 9시',name:'홍길동',phone:'010-6789-0123',dep:'백운리 마을회관',arr:'옥천군청',dir:'청산→읍내',p:1,st:'cancelled',src:'앱'},
+  {id:8,date:'2026-05-15',time:'오후 2시',name:'강태풍',phone:'010-8901-2345',dep:'옥천성모병원',arr:'백운리 마을회관',dir:'읍내→청산',p:2,st:'done',src:'앱'}
+];
+
+var curWTab='w',editMode=false,selIds=[],selReqId=null;
+var mSt={},curS=1;
+var weekBase,weekSelDay=null;
+var dialH=9,dialMin=0,mergeIds=[];
+var _confOk=null;
+
+/* 스플래시 */
+setTimeout(function(){
+  var sp=document.getElementById('splash');
+  sp.style.transition='opacity 0.4s';sp.style.opacity='0';
+  setTimeout(function(){sp.style.display='none';},400);
+},1800);
+
+window.onload=function(){
+  var d=new Date(TODAY);
+  document.getElementById('today-str').textContent=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+DAYS[d.getDay()]+'요일)';
+  weekBase=new Date(d.getTime()-d.getDay()*86400000);
+  refreshHome();
+};
+
+function refreshHome(){
+  var todayConf=reqs.filter(function(r){return r.date===TODAY&&r.st!=='cancelled';}).reduce(function(s,r){return s+r.p;},0);
+  var wc=reqs.filter(function(r){return r.st==='waiting';}).length;
+  document.getElementById('home-remain').textContent=Math.max(0,MAX_SEAT-Math.min(todayConf,MAX_SEAT));
+  document.getElementById('home-wait').textContent=wc;
+  document.getElementById('home-wait-cnt2').textContent=wc;
+  document.getElementById('home-today-sub').textContent='오늘 확정·완료 '+reqs.filter(function(r){return r.date===TODAY&&(r.st==='confirmed'||r.st==='done');}).length+'건';
+}
+
+function goPage(p){
+  document.querySelectorAll('.pg').forEach(function(el){el.classList.remove('on');});
+  document.getElementById('pg-'+p).classList.add('on');
+  if(p==='waiting'){curWTab='w';renderWaiting();}
+  if(p==='today') renderTodayRun();
+  if(p==='monthly') renderWeek();
+  if(p==='manual') initM();
+}
+
+function getBookedForTime(date,time){
+  if(!date||!time) return 0;
+  return reqs.filter(function(r){return r.date===date&&r.time===time&&r.st!=='cancelled';}).reduce(function(s,r){return s+r.p;},0);
+}
+
+/* 대기 탭 */
+function switchWTab(t){
+  curWTab=t;editMode=false;selIds=[];
+  ['w','c','x'].forEach(function(k){document.getElementById('wtab-'+k).classList.toggle('on',k===t);});
+  renderWaiting();
+}
+
+function renderWaiting(){
+  var stMap={w:'waiting',c:'confirmed',x:'cancelled'};
+  var list=reqs.filter(function(r){return r.st===stMap[curWTab];});
+  var h='';
+  if(curWTab==='w'){
+    h+='<div class="edit-bar"><div class="edit-bar-info">'+(editMode?selIds.length+'개 선택됨':'편집 모드로 예약을 합칠 수 있어요')+'</div>'+
+      '<div class="edit-bar-btns">'+
+      (editMode?
+        '<button class="btn by2" style="opacity:'+(selIds.length>=2?1:.4)+'" onclick="openMerge()">합치기</button>'+
+        '<button class="btn bo2" onclick="exitEdit()">완료</button>':
+        '<button class="btn bo2" onclick="enterEdit()">편집</button>')+
+      '</div></div>';
+  }
+  if(!list.length){
+    h+='<div class="empty">'+({w:'대기 중인 신청이 없어요',c:'확정된 신청이 없어요',x:'취소된 신청이 없어요'}[curWTab])+'</div>';
+  } else {
+    list.forEach(function(r){h+=wItemHTML(r);});
+  }
+  document.getElementById('wait-tab-body').innerHTML=h;
+}
+
+function getMonthlyUsage(name,date){
+  var ym=date.substring(0,7);
+  return reqs.filter(function(r){return r.name===name&&r.date.startsWith(ym)&&r.st!=='cancelled';}).length;
+}
+
+function wItemHTML(r){
+  var isSel=selIds.indexOf(r.id)>-1;
+  var srcBadge=r.src==='전화'?'<span class="wi-src">📞 전화</span>':'';
+  var usage=getMonthlyUsage(r.name,r.date);
+  var usageBadge='<span class="wi-usage">이달 '+usage+'회</span>';
+  var checkEl=editMode?'<div class="check-circle'+(isSel?' on':'')+'"></div>':'';
+  var btns='';
+  if(curWTab==='w'&&!editMode){
+    btns='<div class="wi-btns">'+
+      '<button class="wi-btn wi-btn-g" onclick="event.stopPropagation();askConfirm('+r.id+')">✓ 확정</button>'+
+      '<button class="wi-btn wi-btn-r" onclick="event.stopPropagation();askCancel('+r.id+')">취소</button>'+
+      '</div>';
+  } else if(curWTab==='c'){
+    btns='<div class="wi-btns"><button class="wi-btn wi-btn-r" onclick="event.stopPropagation();askCancel('+r.id+')">취소</button></div>';
+  } else if(curWTab==='x'){
+    btns='<div class="wi-btns"><button class="wi-btn wi-btn-r" onclick="event.stopPropagation();delReq('+r.id+')">삭제</button></div>';
+  }
+  return '<div class="wait-card"><div class="wait-item'+(isSel?' wait-item-sel':'')+'" onclick="wItemClick('+r.id+')">'+
+    '<div style="display:flex;gap:12px;align-items:flex-start;">'+checkEl+
+    '<div style="flex:1;min-width:0;">'+
+    '<div class="wi-date-badge">'+fmtD(r.date)+' · '+r.time+'</div>'+
+    '<div class="wi-top">'+
+      '<span class="wi-name">'+r.name+' 님</span>'+
+      '<span class="badge '+stCls(r.st)+'">'+stLbl(r.st)+'</span>'+
+    '</div>'+
+    '<div class="wi-route">📍 '+r.dep+' → '+r.arr+'<br>👥 '+r.p+'명</div>'+
+    '<div class="wi-bottom">'+srcBadge+usageBadge+'</div>'+
+    btns+
+    '</div></div></div></div>';
+}
+
+function wItemClick(id){
+  if(editMode){var i=selIds.indexOf(id);if(i>-1)selIds.splice(i,1);else selIds.push(id);renderWaiting();}
+  else openReq(id);
+}
+function enterEdit(){editMode=true;selIds=[];renderWaiting();}
+function exitEdit(){editMode=false;selIds=[];renderWaiting();}
+
+/* 확인 모달 */
+function showConfirm(q,sub,okLabel,okCls,okCb,closeCb){
+  document.getElementById('conf-q').textContent=q;
+  document.getElementById('conf-sub').textContent=sub||'';
+  _confOk=okCb;
+  document.getElementById('conf-btns').innerHTML=
+    '<button class="btn bo2" style="flex:1;padding:13px;" onclick="'+(closeCb?'('+closeCb+')();':'')+'closeM(\'mod-confirm\')">닫기</button>'+
+    '<button class="btn '+okCls+'" style="flex:1;padding:13px;" onclick="_confOk&&_confOk();closeM(\'mod-confirm\')">'+okLabel+'</button>';
+  document.getElementById('mod-confirm').classList.add('on');
+}
+function askConfirm(id){
+  var r=getR(id);if(!r)return;
+  showConfirm('확정하시겠습니까?',r.name+' 님 · '+r.time,'확정 알림 발송','bg2',function(){r.st='confirmed';refresh();toast('💬 '+r.name+' 님께 확정 알림 발송 완료');});
+}
+function askCancel(id){
+  var r=getR(id);if(!r)return;
+  showConfirm('정말 취소하시겠습니까?',r.name+' 님 · '+r.time,'취소 알림 발송','br2',function(){r.st='cancelled';refresh();toast('💬 '+r.name+' 님께 취소 알림 발송 완료');});
+}
+
+/* 합치기 */
+function openMerge(){
+  if(selIds.length<2){toast('2개 이상 선택해주세요');return;}
+  mergeIds=selIds.slice();
+  var names=mergeIds.map(function(id){var r=getR(id);return r?r.name:'';}).join(', ');
+  document.getElementById('merge-sub').textContent=mergeIds.length+'건을 합칩니다: '+names;
+  var ph='';mergeIds.forEach(function(id){var r=getR(id);if(r)ph+='<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);color:var(--text-muted);">'+r.name+' · '+r.time+' · '+r.dep+'→'+r.arr+'</div>';});
+  document.getElementById('merge-preview').innerHTML=ph;
+  dialH=9;dialMin=0;updateDialDisplay();
+  document.getElementById('mod-merge').classList.add('on');
+}
+function dialChange(type,dir){
+  if(type==='h'){dialH+=dir;if(dialH<6)dialH=22;if(dialH>22)dialH=6;}
+  else{dialMin+=dir*10;if(dialMin<0)dialMin=50;if(dialMin>=60)dialMin=0;}
+  updateDialDisplay();
+}
+function updateDialDisplay(){
+  var ampm=dialH<12?'오전':'오후',dh=dialH>12?dialH-12:dialH;if(dh===0)dh=12;
+  document.getElementById('dial-h').textContent=dh;
+  document.getElementById('dial-m').textContent=dialMin<10?'0'+dialMin:''+dialMin;
+  document.getElementById('dial-preview').textContent=ampm+' '+dh+'시'+(dialMin?' '+dialMin+'분':'');
+}
+function doMerge(){
+  var ampm=dialH<12?'오전':'오후',dh=dialH>12?dialH-12:dialH;if(dh===0)dh=12;
+  var newTime=ampm+' '+dh+'시'+(dialMin?' '+dialMin+'분':'');
+  var totalP=mergeIds.reduce(function(s,id){var r=getR(id);return s+(r?r.p:0);},0);
+  var first=getR(mergeIds[0]);if(!first){closeM('mod-merge');return;}
+  for(var i=1;i<mergeIds.length;i++){var idx=reqs.findIndex(function(r){return r.id===mergeIds[i];});if(idx>-1)reqs.splice(idx,1);}
+  first.time=newTime;first.p=Math.min(totalP,8);
+  closeM('mod-merge');exitEdit();
+  var name=first.name;first.st='waiting';
+  showConfirm('확정하시겠습니까?',name+' 외 '+mergeIds.length+'건 합치기 · '+newTime,'확정 알림 발송','bg2',function(){first.st='confirmed';refresh();toast('💬 '+name+' 님 합치기 확정 알림 발송 완료');},function(){refresh();});
+}
+
+/* 오늘 운행 */
+function renderTodayRun(){
+  var list=reqs.filter(function(r){return r.date===TODAY&&r.st!=='cancelled';});
+  document.getElementById('today-run-list').innerHTML=list.length?list.map(tCardHTML).join(''):'<div class="empty">오늘 신청이 없어요</div>';
+}
+function tCardHTML(r){
+  var src=r.src==='전화'?'<span style="font-size:12px;background:#E8F0FE;color:#1A6EC4;padding:3px 9px;border-radius:9px;font-weight:700;margin-left:6px;">📞 전화</span>':'';
+  var usage=getMonthlyUsage(r.name,r.date);
+  var usageBadge='<span style="font-size:12px;background:#F0F0F0;color:#666;padding:3px 10px;border-radius:9px;font-weight:700;margin-left:6px;">이달 '+usage+'회</span>';
+  return '<div class="today-card" onclick="openReq('+r.id+')">'+
+    '<div class="today-card-inner">'+
+    '<div class="tc-date-badge">'+fmtD(r.date)+' · '+r.time+'</div>'+
+    '<div class="tc-top">'+
+      '<span class="tc-name">'+r.name+' 님'+src+usageBadge+'</span>'+
+      '<span class="badge '+stCls(r.st)+'">'+stLbl(r.st)+'</span>'+
+    '</div>'+
+    '<div class="tc-route">📍 '+r.dep+' → '+r.arr+'<br>👥 '+r.p+'명</div>'+
+    '</div></div>';
+}
+
+/* 주간 캘린더 */
+function getWeekOfMonth(date){
+  var d=new Date(date);
+  var firstDay=new Date(d.getFullYear(),d.getMonth(),1);
+  var firstMon=firstDay.getDay();// 0=일
+  return Math.ceil((d.getDate()+firstMon)/7);
+}
+function renderWeek(){
+  var ym=weekBase.getFullYear()+'-'+p2(weekBase.getMonth()+1);
+  var mReqs=reqs.filter(function(r){return r.date.startsWith(ym)&&r.st!=='cancelled';});
+  var totalP=mReqs.reduce(function(s,r){return s+r.p;},0);
+  document.getElementById('monthly-stats').innerHTML=
+    '<div style="background:var(--green-light);border:1.5px solid rgba(26,122,74,0.3);border-radius:var(--radius-sm);padding:16px;">'+
+      '<div style="font-size:clamp(13px,3.8vw,15px);font-weight:700;color:var(--green-dark);margin-bottom:6px;">이번 달 잔여</div>'+
+      '<div style="display:flex;align-items:baseline;gap:4px;"><span style="font-size:clamp(28px,8vw,36px);font-weight:900;color:var(--green);">'+(112-mReqs.length)+'</span><span style="font-size:clamp(14px,4vw,16px);font-weight:700;color:var(--green-dark);">/ 112회</span></div></div>'+
+    '<div style="background:var(--green-light);border:1.5px solid rgba(26,122,74,0.3);border-radius:var(--radius-sm);padding:16px;">'+
+      '<div style="font-size:clamp(13px,3.8vw,15px);font-weight:700;color:var(--green-dark);margin-bottom:6px;">월별 이용자 수</div>'+
+      '<div style="display:flex;align-items:baseline;gap:4px;"><span style="font-size:clamp(28px,8vw,36px);font-weight:900;color:var(--green);">'+totalP+'</span><span style="font-size:clamp(14px,4vw,16px);font-weight:700;color:var(--green-dark);">명 ('+mReqs.length+'건)</span></div></div>';
+  // 주차 계산: weekBase 기준 월의 몇 주차인지
+  var midWeek=new Date(weekBase.getTime()+3*86400000);// 주 중간(수요일) 기준
+  var weekNum=getWeekOfMonth(midWeek);
+  var monthLabel=(midWeek.getMonth()+1)+'월 '+weekNum+'주차';
+  document.getElementById('week-label').textContent=monthLabel;
+  var start=weekBase,end=new Date(start.getTime()+6*86400000);
+  var h='';
+  for(var i=0;i<7;i++){
+    var d=new Date(start.getTime()+i*86400000),ymd=fmt(d);
+    var isTod=ymd===TODAY,isSel=weekSelDay===ymd;
+    var dr=reqs.filter(function(r){return r.date===ymd&&r.st!=='cancelled';});
+    h+='<div class="wday-col"><div class="wday-h">'+DAYS[d.getDay()]+'</div>'+
+      '<div class="wday-cell'+(isTod?' today':'')+(isSel?' sel':'')+'" onclick="selWeekDay(\''+ymd+'\')">'+
+        '<div class="wday-num">'+d.getDate()+'</div>'+
+        (dr.length?'<div class="wday-cnt">'+dr.length+'건</div>':'')+
+        (dr.length&&!isSel?'<div class="wday-dots">'+dr.slice(0,3).map(function(){return '<div class="dot"></div>';}).join('')+'</div>':'')+
+      '</div></div>';
+  }
+  document.getElementById('week-grid').innerHTML=h;
+  if(weekSelDay)showWeekDetail(weekSelDay);else document.getElementById('week-detail').style.display='none';
+}
+function moveWeek(d){weekBase=new Date(weekBase.getTime()+d*7*86400000);weekSelDay=null;document.getElementById('week-detail').style.display='none';renderWeek();}
+function selWeekDay(ymd){weekSelDay=ymd;renderWeek();showWeekDetail(ymd);}
+function showWeekDetail(ymd){
+  var d=new Date(ymd);
+  document.getElementById('week-detail-hd').textContent='📅 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+DAYS[d.getDay()]+'요일)';
+  var list=reqs.filter(function(r){return r.date===ymd&&r.st!=='cancelled';});
+  document.getElementById('week-detail-list').innerHTML=list.length?list.map(tCardHTML).join(''):'<div class="empty">이날 신청이 없어요</div>';
+  document.getElementById('week-detail').style.display='block';
+}
+
+/* 상세 모달 */
+function openReq(id){
+  var r=getR(id);if(!r)return;selReqId=id;
+  document.getElementById('mrt').textContent=r.name+' 님 신청';
+  document.getElementById('mrs').textContent=fmtD(r.date)+' '+r.time+' · '+r.src+' 신청';
+  document.getElementById('mrb').innerHTML=mRow('연락처',r.phone)+mRow('방향',r.dir)+mRow('출발지',r.dep)+mRow('도착지',r.arr)+mRow('인원',r.p+'명')+'<div class="mrow"><span class="mk">상태</span><span class="badge '+stCls(r.st)+'">'+stLbl(r.st)+'</span></div>';
+  var btns='<button class="btn bo2" onclick="closeM(\'mod-req\')">닫기</button>';
+  if(r.st==='waiting') btns+='<button class="btn bg2" onclick="closeM(\'mod-req\');askConfirm('+id+')">✓ 확정</button><button class="btn br2" onclick="closeM(\'mod-req\');askCancel('+id+')">취소</button>';
+  else if(r.st==='confirmed') btns+='<button class="btn br2" onclick="closeM(\'mod-req\');askCancel('+id+')">취소</button>';
+  else if(r.st==='cancelled') btns+='<button class="btn bg2" onclick="closeM(\'mod-req\');askConfirm('+id+')">↩ 다시 확정</button>';
+  document.getElementById('mft-btns').innerHTML=btns;
+  document.getElementById('mod-req').classList.add('on');
+}
+function mRow(k,v){return '<div class="mrow"><span class="mk">'+k+'</span><span class="mv">'+v+'</span></div>';}
+
+/* 공통 */
+function delReq(id){var idx=reqs.findIndex(function(r){return r.id===id;});if(idx>-1){reqs.splice(idx,1);refresh();toast('삭제했어요');}}
+function refresh(){refreshHome();renderWaiting();if(weekSelDay)showWeekDetail(weekSelDay);}
+function getR(id){return reqs.find(function(x){return x.id===id;});}
+
+/* 전화 신청 */
+function initM(){
+  mSt={name:'',phone:'',date:'',dir:'',dep:'',arr:'',time:'',p:1};curS=1;
+  document.getElementById('m-name').value='';
+  document.getElementById('m-phone').value='';
+  /* 날짜 리스트 */
+  var h='',base=new Date(TODAY);
+  for(var i=0;i<7;i++){
+    var d=new Date(base.getTime()+i*86400000),ymd=fmt(d);
+    var dow=d.getDay(),isSun=dow===0,isSat=dow===6,isToday=i===0;
+    var numColor=isToday?'var(--text)':isSun?'var(--red)':isSat?'var(--blue, #1A6EC4)':'var(--text)';
+    var todayBadge=isToday?'<div class="dc-today-badge">오늘</div>':'';
+    var dowTxt=isToday?'':DAYS[dow]+'요일';
+    var fullLabel=(d.getMonth()+1)+'월 '+d.getDate()+'일';
+    h+='<div class="date-card-big'+(isSun||isSat?' wknd':'')+'" id="dc-'+ymd+'" onclick="pickD(\''+ymd+'\')">'+
+      '<div class="dc-left">'+todayBadge+(dowTxt?'<div class="dc-dow" style="color:'+numColor+'">'+dowTxt+'</div>':'')+
+      '<div class="dc-num" style="color:'+numColor+'">'+d.getDate()+'</div></div>'+
+      '<div class="dc-right"><div class="dc-full">'+fullLabel+'</div></div>'+
+      '<div class="dc-check">✓</div></div>';
+  }
+  document.getElementById('date-list').innerHTML=h;
+  document.getElementById('dir-cs').classList.remove('on');
+  document.getElementById('dir-sc').classList.remove('on');
+  document.getElementById('dep-wrap').style.display='none';
+  document.getElementById('sumbox').style.display='none';
+  document.getElementById('prs-warn').style.display='none';
+  document.querySelectorAll('.ms').forEach(function(el){el.style.display='none';});
+  document.getElementById('ms1').style.display='block';
+  updMStep(1);
+}
+
+function mStep(n){
+  if(n>curS){
+    if(curS===1){var nm=document.getElementById('m-name').value.trim();if(!nm){alert('이름을 입력해주세요');return;}mSt.name=nm;mSt.phone=document.getElementById('m-phone').value.trim();}
+    if(curS===2&&!mSt.date){alert('날짜를 선택해주세요');return;}
+    if(curS===3&&(!mSt.dir||!mSt.dep)){alert('방향과 출발지를 선택해주세요');return;}
+    if(curS===4&&!mSt.arr){alert('도착지를 선택해주세요');return;}
+    if(curS===5&&!mSt.time){alert('시간을 선택해주세요');return;}
+  }
+  if(n===4) buildArrList();
+  if(n===5) buildTimeList();
+  if(n===6) buildPrsList();
+  curS=n;
+  document.querySelectorAll('.ms').forEach(function(el){el.style.display='none';});
+  document.getElementById('ms'+n).style.display='block';
+  updMStep(n);
+  if(n===6) updSum();
+}
+
+function updMStep(n){
+  for(var i=1;i<=6;i++){var d=document.getElementById('sd'+i);d.className='sd'+(i<n?' dn':i===n?' on':'');}
+  for(var j=1;j<=5;j++){var l=document.getElementById('stl'+j);l.className='stl'+(j<n?' dn':'');}
+}
+
+function pickD(ymd){
+  mSt.date=ymd;
+  document.querySelectorAll('.date-card-big').forEach(function(b){b.classList.remove('on');});
+  document.getElementById('dc-'+ymd).classList.add('on');
+}
+
+function pickDir(dir){
+  mSt.dir=dir;mSt.dep='';mSt.arr='';
+  document.getElementById('dir-cs').classList.toggle('on',dir==='청산→읍내');
+  document.getElementById('dir-sc').classList.toggle('on',dir==='읍내→청산');
+  var isCE=dir==='청산→읍내';
+  document.getElementById('dep-lbl').textContent='출발지 ('+(isCE?'청산':'읍내')+') 선택';
+  var locs=isCE?LOCS_C:LOCS_E;
+  document.getElementById('dep-list').innerHTML=locs.map(function(l){
+    return '<button class="loc-opt-big" id="dep-'+encId(l.lb)+'" onclick="pickDep(\''+l.lb+'\')">'+
+      '<span class="loc-em">'+l.em+'</span><span class="loc-label">'+l.lb+'</span><span class="loc-check">✓</span></button>';
+  }).join('');
+  document.getElementById('dep-wrap').style.display='block';
+}
+
+function pickDep(v){
+  mSt.dep=v;
+  document.querySelectorAll('[id^="dep-"]').forEach(function(b){b.classList.remove('on');});
+  var el=document.getElementById('dep-'+encId(v));if(el)el.classList.add('on');
+}
+
+function buildArrList(){
+  if(!mSt.dir)return;
+  var isCE=mSt.dir==='청산→읍내';
+  document.getElementById('arr-msub').textContent='도착지 ('+(isCE?'읍내':'청산')+') 선택';
+  var locs=isCE?LOCS_E:LOCS_C;
+  document.getElementById('arr-list').innerHTML=locs.map(function(l){
+    return '<button class="loc-opt-big" id="arr-'+encId(l.lb)+'" onclick="pickArr(\''+l.lb+'\')">'+
+      '<span class="loc-em">'+l.em+'</span><span class="loc-label">'+l.lb+'</span><span class="loc-check">✓</span></button>';
+  }).join('');
+  if(mSt.arr){var el=document.getElementById('arr-'+encId(mSt.arr));if(el)el.classList.add('on');}
+}
+
+function pickArr(v){
+  mSt.arr=v;
+  document.querySelectorAll('[id^="arr-"]').forEach(function(b){b.classList.remove('on');});
+  var el=document.getElementById('arr-'+encId(v));if(el)el.classList.add('on');
+}
+
+function buildTimeList(){
+  var TIMES_AM=TIMES.slice(0,3);// 오전 9~11시
+  var TIMES_PM=TIMES.slice(3);  // 오후 12~6시
+  function makeCard(t,i){
+    var booked=getBookedForTime(mSt.date,t);
+    var full=booked>=MAX_SEAT;
+    var isSel=mSt.time===t;
+    if(full){
+      return '<button class="time-card time-card-full" disabled>'+
+        '<span class="time-main">'+t+'</span>'+
+        '<span class="time-full-txt">마감</span></button>';
+    }
+    return '<button class="time-card'+(isSel?' on':'')+'" id="tc'+i+'" onclick="pickT(\''+t+'\','+i+')">'+
+      '<span class="time-main">'+t+'</span>'+
+      '<span class="time-check">✓</span></button>';
+  }
+  var h='<div class="time-section-label">🌅 오전</div>';
+  TIMES_AM.forEach(function(t,i){h+=makeCard(t,i);});
+  h+='<div class="time-section-label" style="margin-top:20px;">🌇 오후</div>';
+  TIMES_PM.forEach(function(t,i){h+=makeCard(t,i+3);});
+  document.getElementById('time-list').innerHTML=h;
+}
+
+function pickT(t,i){
+  mSt.time=t;mSt.p=1;
+  TIMES.forEach(function(_,j){var b=document.getElementById('tc'+j);if(b)b.classList.toggle('on',j===i);});
+}
+
+function buildPrsList(){
+  var booked=getBookedForTime(mSt.date,mSt.time);
+  var avail=MAX_SEAT-booked;
+  var warnEl=document.getElementById('prs-warn');
+  if(avail<MAX_SEAT){warnEl.style.display='flex';warnEl.innerHTML='⚠️ 이 시간대에는 <strong style="margin:0 3px;">'+avail+'명</strong>까지만 탑승 신청할 수 있어요';}
+  else{warnEl.style.display='none';}
+  if(mSt.p>avail) mSt.p=avail>0?1:0;
+  document.getElementById('prs-list').innerHTML=[1,2,3,4].map(function(n){
+    if(n>avail){return '<div class="pb-full">'+n+'명</div>';}
+    return '<button class="pb'+(n===mSt.p?' on':'')+'" id="pb'+n+'" onclick="pickP('+n+')">'+n+'명</button>';
+  }).join('');
+  updSum();
+}
+
+function pickP(n){
+  mSt.p=n;
+  [1,2,3,4].forEach(function(i){var b=document.getElementById('pb'+i);if(b)b.className='pb'+(i===n?' on':'');});
+  updSum();
+}
+
+function updSum(){
+  if(!mSt.date||!mSt.dep||!mSt.arr||!mSt.time)return;
+  var d=new Date(mSt.date),dt=(d.getMonth()+1)+'월 '+d.getDate()+'일 ('+DAYS[d.getDay()]+')';
+  document.getElementById('sum-body').innerHTML=
+    '<div class="sum-r"><span class="sum-k">이름</span><span class="sum-v">'+mSt.name+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">날짜·시간</span><span class="sum-v">'+dt+' '+mSt.time+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">방향</span><span class="sum-v">'+mSt.dir+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">출발지</span><span class="sum-v">'+mSt.dep+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">도착지</span><span class="sum-v">'+mSt.arr+'</span></div>'+
+    '<div class="sum-r"><span class="sum-k">인원</span><span class="sum-v">'+mSt.p+'명</span></div>';
+  document.getElementById('sumbox').style.display='block';
+}
+
+function submitM(){
+  if(!mSt.name||!mSt.date||!mSt.time||!mSt.dep||!mSt.arr){alert('모든 항목을 선택해주세요');return;}
+  reqs.unshift({id:Date.now(),date:mSt.date,time:mSt.time,name:mSt.name,phone:mSt.phone,dep:mSt.dep,arr:mSt.arr,dir:mSt.dir,p:mSt.p,st:'waiting',src:'전화',kakaoSent:false});
+  refreshHome();toast('✅ '+mSt.name+' 님 신청 접수됐어요');goPage('home');
+}
+
+/* 유틸 */
+function closeM(id){document.getElementById(id).classList.remove('on');}
+function stCls(s){return{waiting:'bw',confirmed:'bc',done:'bd2cls',cancelled:'bx'}[s]||'';}
+function stLbl(s){return{waiting:'대기중',confirmed:'확정',done:'완료',cancelled:'취소'}[s]||s;}
+function fmtD(s){var d=new Date(s);return(d.getMonth()+1)+'/'+d.getDate()+'('+DAYS[d.getDay()]+')';}
+function fmt(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
+function p2(n){return n<10?'0'+n:''+n;}
+function encId(s){return s.replace(/\s/g,'_').replace(/[^\w가-힣]/g,'');}
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');setTimeout(function(){t.classList.remove('on');},2500);}
+</script>
+</body>
+</html>
