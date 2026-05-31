@@ -1167,8 +1167,12 @@ window.switchWTab=function(t){curWTab=t;editMode=false;selIds=[];['waiting','con
 async function renderWaiting(){
   const r=await api('/api/admin/reservations?status='+curWTab);
   let list=r.json?.reservations||[];
-  // 확정 탭에서 effective_status='completed'(과거 슬롯) 숨김 — 완료된 운행은 마을 현황·통계에서만 봄
-  if(curWTab==='confirmed') list=list.filter(x=>x.effective_status!=='completed');
+  // 확정 탭은 "오늘 이후" 만 표시 (과거 날짜 운행은 통계에서만 봄)
+  // ※ 오늘 운행 중 시간 지난 건도 보이도록 effective_status가 아닌 reservation_date 로 필터
+  if(curWTab==='confirmed'){
+    const today=todayStr();
+    list=list.filter(x=>x.reservation_date>=today);
+  }
   waitingCache=list;
   let h='';
   if(curWTab==='waiting'){
