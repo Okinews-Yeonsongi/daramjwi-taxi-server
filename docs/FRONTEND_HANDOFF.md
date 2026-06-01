@@ -423,8 +423,8 @@ const { access_token, user } = await fetch(`${API_BASE}/api/dev/login`, {
 주민이 직접 신청하지 못해 기사님이 대신. body:
 ```json
 {
-  "guest_name": "박할머니",
-  "guest_phone": "01099991111",
+  "name": "박할머니",
+  "phone": "01099991111",
   "date": "2026-05-31",
   "hour": 10,
   "departure_id": 1,
@@ -432,7 +432,7 @@ const { access_token, user } = await fetch(`${API_BASE}/api/dev/login`, {
   "persons": 2
 }
 ```
-프로필 저장 안 함 (1회성). 결과: 대기 상태로 생성.
+**자동 회원 매칭 (0012):** 입력한 `phone`과 동일한 회원이 있으면 → 그 user_id로 회원 예약 저장 → 본인 "내 예약"에 자동 표시.  매칭 없으면 → guest 예약 (user_id=NULL).
 
 #### `PATCH /api/admin/reservations/{id}/confirm` 🔐
 확정. 일/월 한도 자동 체크.
@@ -635,9 +635,22 @@ PWA 매니페스트는 [`public/manifest.json`](../public/manifest.json)에 있�
 - 정원 4명. 합승해서 8명이면 **운행 수 = 1**.
 - 한도 계산은 **런 수 기준** (개별 예약 수가 아님).
 
-### 7.3 한도
-- **일**: 차량 2대 × 운행 가능 시간 = 일 최대 ~16회. 단, **정책상 일 4회 운행**으로 제한.
-- **월**: 4 × 28 = **월 112회**.
+### 7.3 한도 (매트릭스에 반영됨 — 0011)
+- **일**: 정책상 일 4회 운행 제한
+- **월**: 4 × 28 = 월 112회
+- **한도 도달 시 동작:**
+  - 빈 차량으로 새 운행 시도 → 매트릭스에 **마감** 표시 (잔여 0)
+  - **합승은 허용** — 기존 운행에 인원만 추가하는 거라 운행 수 안 늘림
+  - 예: 4회 운행 다 차도 어느 시간 차 A에 2명만 있으면 → 그 시간 합승 잔여 2명 표시
+
+### 7.3.1 전화 신청 자동 회원 매칭 (0012)
+- 기사님이 📞 전화 신청 6단계로 입력 시:
+  - 입력된 **전화번호로 `profiles` 검색** → 같은 phone의 회원 있으면 → 그 user_id로 회원 예약 저장
+  - 매칭 안 되면 → 기존대로 guest 예약 (user_id=NULL)
+- **결과:**
+  - 카카오 가입 어르신 → 본인 "내 예약"에 자동 표시 ✅
+  - 미가입 어르신 → guest 예약, "내 예약"에 안 보임 (정상)
+- 프론트는 알아서 해줄 일 없음 — 백엔드가 자동 처리
 
 ### 7.4 상태 (Status)
 DB의 `status` 5종:
@@ -665,12 +678,20 @@ UI에서는 항상 `effective_status` 사용 권장.
 
 `lib/supabase/types.ts` 전체 → 프론트에서도 그대로 import 가능 (또는 복사).
 
-핵심:
+### 8.1 핵심 enum
 ```typescript
 type LocationCategory = "cheongsanmyeon" | "eupnae";
 type ReservationStatus = "waiting" | "confirmed" | "cancelled" | "completed";
 type VehicleCode = "A" | "B";
 ```
+
+### 8.2 주요 테이블
+- **profiles** — 사용자 (id, phone, name, role, status, kakao_id, kakao_nickname, kakao_profile_image)
+- **reservations** — 예약 (id, user_id, guest_name, guest_phone, date, hour, departure_minute, persons, status, vehicle_id, ...)
+- **locations** — 거점 (id, category, name, emoji, display_order)
+- **vehicles** — 차량 (id, code, is_active)
+- **time_slots** — 시간 슬롯 (hour, label)
+- **push_subscriptions** — 웹 푸시 구독 (id, user_id, endpoint, p256dh, auth, user_agent) — 0010에서 추가
 
 타입 자동 생성 (Supabase가 스키마 변경됐을 때):
 ```bash
@@ -771,7 +792,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_xxxxx
 - [`docs/TEST_CHECKLIST.md`](./TEST_CHECKLIST.md) — 수동 검증 체크리스트
 - [`docs/prototypes/admin-prototype.html`](./prototypes/admin-prototype.html) — 기사님용 UI 프로토타입
 - [`docs/prototypes/resident-prototype.html`](./prototypes/resident-prototype.html) — 주민용 UI 프로토타입
-- `supabase/migrations/*` — DB 스키마 + RPC 함수 (0001~0009)
+- `supabase/migrations/*` — DB 스키마 + RPC 함수 (0001~0012):
+  - 0001 초기 스키마 / 0002 RLS 정책 / 0003 예약 RPC 함수
+  - 0004 거점 4개 정리 + profiles.address 제거
+  - 0005 전화신청 (guest_name/phone)
+  - 0006 Realtime publication
+  - 0007 합치기 (departure_minute + merge RPC)
+  - 0008 매트릭스 1시간 사이클
+  - 0009 매트릭스 위치 추적 + 빈 복귀 1시간
+  - 0010 카카오 로그인 컬럼 + push_subscriptions 테이블
+  - 0011 매트릭스에 일/월 한도 반영
+  - 0012 전화 신청 자동 회원 매칭 (phone → user_id)
 
 ---
 
