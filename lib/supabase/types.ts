@@ -248,6 +248,7 @@ export interface Database {
           p_departure_id: number;
           p_arrival_id: number;
           p_persons: number;
+          p_user_id?: string | null; // 옵션: 매칭된 회원의 user_id (있으면 회원 예약)
         };
         Returns: Database["public"]["Tables"]["reservations"]["Row"];
       };

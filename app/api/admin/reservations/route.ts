@@ -142,6 +142,13 @@ export async function POST(request: Request) {
   if (!isWithinBookingWindow(date)) return apiError("신청은 오늘부터 7일 이내만 가능해요.", 400);
   if (!isSlotInFuture(date, hour)) return apiError("이미 지난 시간이에요. 다른 시간을 선택해 주세요.", 400);
 
+  // 회원 자동 매칭: 같은 전화번호의 회원 있으면 그 user_id로 회원 예약 저장
+  const { data: matchedUser } = await db
+    .from("profiles")
+    .select("id")
+    .eq("phone", localPhone)
+    .maybeSingle();
+
   const { data, error } = await db.rpc("create_guest_reservation_atomic", {
     p_guest_name: trimmedName,
     p_guest_phone: localPhone,
@@ -150,6 +157,7 @@ export async function POST(request: Request) {
     p_departure_id: departure_id,
     p_arrival_id: arrival_id,
     p_persons: persons,
+    p_user_id: matchedUser?.id ?? null, // 매칭되면 회원 예약, 안 되면 guest
   });
 
   if (error) {
