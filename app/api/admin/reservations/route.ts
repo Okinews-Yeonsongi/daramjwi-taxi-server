@@ -24,6 +24,7 @@ const BOOK_ERRORS: Record<string, { msg: string; status: number }> = {
   INVALID_LOCATION: { msg: "장소 정보가 올바르지 않아요.", status: 400 },
   SAME_CATEGORY: { msg: "출발지와 도착지는 서로 다른 지역이어야 해요.", status: 400 },
   NO_VEHICLE: { msg: "그 시간은 마감이에요. 다른 시간을 선택해 주세요.", status: 409 },
+  FORBIDDEN: { msg: "관리자 권한이 필요해요. (DB 함수 권한 설정 확인)", status: 403 },
 };
 
 /**
