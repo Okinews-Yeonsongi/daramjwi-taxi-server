@@ -390,7 +390,8 @@ const { access_token, user } = await fetch(`${API_BASE}/api/dev/login`, {
 }
 ```
 
-#### `GET /api/admin/reservations?status={waiting|confirmed|cancelled}&date=YYYY-MM-DD` 🔐
+#### `GET /api/admin/reservations?status={waiting|confirmed|cancelled}&date=YYYY-MM-DD&include_past=1` 🔐
+> **기본: 오늘 이후 예약만 반환** (`reservation_date >= today`). 과거 데이터는 처리 불가능해서 노이즈. 통계·캘린더용으로 과거까지 보려면 `?include_past=1` 또는 `?date=YYYY-MM-DD` 지정.
 관리자 예약 리스트. 신청자 프로필 + 장소명 + **이번 달 확정 탑승수** + **effective_status** + `time_label` 모두 포함.
 ```json
 {

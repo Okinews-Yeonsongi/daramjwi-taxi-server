@@ -1165,12 +1165,10 @@ async function refreshAdminHome(){
 // ─── 대기 신청 현황 ───
 window.switchWTab=function(t){curWTab=t;editMode=false;selIds=[];['waiting','confirmed','cancelled'].forEach(k=>{$('wtab-'+(k==='waiting'?'w':k==='confirmed'?'c':'x')).classList.toggle('on',k===t);});renderWaiting();};
 async function renderWaiting(){
+  // 서버가 기본으로 "오늘 이후" 만 반환함 (모든 탭 통일)
+  // 과거 데이터 보려면 ?include_past=1 또는 ?date=YYYY-MM-DD
   const r=await api('/api/admin/reservations?status='+curWTab);
-  let list=r.json?.reservations||[];
-  // 모든 탭에서 "오늘 이후" 만 표시 (과거 날짜는 어차피 처리 불가 — 통계에서만 봄)
-  // ※ 오늘 운행 중 시간 지난 건도 보이도록 effective_status가 아닌 reservation_date 로 필터
-  const today=todayStr();
-  list=list.filter(x=>x.reservation_date>=today);
+  const list=r.json?.reservations||[];
   waitingCache=list;
   let h='';
   if(curWTab==='waiting'){

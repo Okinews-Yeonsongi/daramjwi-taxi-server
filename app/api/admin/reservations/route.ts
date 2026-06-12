@@ -40,6 +40,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
   const date = url.searchParams.get("date");
+  const includePast = url.searchParams.get("include_past") === "1"; // 과거 데이터까지 보고 싶을 때만
   if (status && !STATUSES.includes(status as ReservationStatus)) return apiError("status 값이 올바르지 않아요.", 400);
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return apiError("date 형식이 올바르지 않아요.", 400);
 
@@ -51,6 +52,8 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: true });
   if (status) q = q.eq("status", status as ReservationStatus);
   if (date) q = q.eq("reservation_date", date);
+  // 기본: 오늘 이후만 (과거 신청은 처리 불가). 통계/캘린더용으로는 ?include_past=1 또는 ?date=...
+  if (!includePast && !date) q = q.gte("reservation_date", kstTodayString());
 
   const [resvRes, profRes, locRes, slotRes, vehRes, monthlyMap] = await Promise.all([
     q,
