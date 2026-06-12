@@ -1167,12 +1167,10 @@ window.switchWTab=function(t){curWTab=t;editMode=false;selIds=[];['waiting','con
 async function renderWaiting(){
   const r=await api('/api/admin/reservations?status='+curWTab);
   let list=r.json?.reservations||[];
-  // 확정 탭은 "오늘 이후" 만 표시 (과거 날짜 운행은 통계에서만 봄)
+  // 모든 탭에서 "오늘 이후" 만 표시 (과거 날짜는 어차피 처리 불가 — 통계에서만 봄)
   // ※ 오늘 운행 중 시간 지난 건도 보이도록 effective_status가 아닌 reservation_date 로 필터
-  if(curWTab==='confirmed'){
-    const today=todayStr();
-    list=list.filter(x=>x.reservation_date>=today);
-  }
+  const today=todayStr();
+  list=list.filter(x=>x.reservation_date>=today);
   waitingCache=list;
   let h='';
   if(curWTab==='waiting'){
