@@ -609,9 +609,9 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
         <div class="sd on" id="sd1">1</div><div class="stl" id="stl1"></div>
         <div class="sd" id="sd2">2</div><div class="stl" id="stl2"></div>
         <div class="sd" id="sd3">3</div><div class="stl" id="stl3"></div>
-        <div class="sd" id="sd4">4</div><div class="stl" id="stl4"></div>
-        <div class="sd" id="sd5">5</div><div class="stl" id="stl5"></div>
-        <div class="sd" id="sd6">6</div>
+        <div class="sd" id="sd4" style="display:none;">4</div><div class="stl" id="stl4" style="display:none;"></div>
+        <div class="sd" id="sd5">4</div><div class="stl" id="stl5"></div>
+        <div class="sd" id="sd6">5</div>
       </div>
       <div class="ms on" id="ms1">
         <div class="mt">누가 전화하셨나요?</div><div class="msub">이름과 연락처를 입력해주세요</div>
@@ -625,7 +625,7 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
         <div class="sf2"><button class="bb" onclick="mStep(1)">← 이전</button><button class="bn" onclick="mStep(3)">다음 →</button></div>
       </div>
       <div class="ms" id="ms3">
-        <div class="mt">어느 방향인가요?</div><div class="msub">방향·출발지를 선택해주세요</div>
+        <div class="mt">어느 방향인가요?</div><div class="msub">청산 방면 / 옥천 방면 선택</div>
         <div class="dir-grid">
           <button class="dir-btn" id="dir-cs" onclick="pickDir('cheongsanmyeon')"><div class="dir-em">🏡</div><div class="dir-label">청산 → 읍내</div></button>
           <button class="dir-btn" id="dir-sc" onclick="pickDir('eupnae')"><div class="dir-em">🏥</div><div class="dir-label">읍내 → 청산</div></button>
@@ -1189,9 +1189,9 @@ function waitItemHTML(x){
   const checkEl=editMode?'<span class="check-circle'+(isSel?' on':'')+'"></span>':'';
   let btns='';
   if(curWTab==='waiting'&&!editMode){
-    btns='<div class="wi-btns"><button class="wi-btn wi-btn-g" onclick="event.stopPropagation();adminConfirm('+x.id+')">✓ 확정</button><button class="wi-btn wi-btn-r" onclick="event.stopPropagation();adminCancel('+x.id+')">취소</button></div>';
+    btns='<div class="wi-btns"><button class="wi-btn wi-btn-g" onclick="event.stopPropagation();adminConfirm('+x.id+')">✓ 확정</button><button class="wi-btn wi-btn-r" onclick="event.stopPropagation();adminCancel('+x.id+')">취소</button><button class="wi-btn" style="background:#eef;color:#33a;" onclick="event.stopPropagation();editPhone('+x.id+')">📞 번호 수정</button></div>';
   } else if(curWTab==='confirmed'){
-    btns='<div class="wi-btns"><button class="wi-btn wi-btn-r" onclick="event.stopPropagation();adminCancel('+x.id+')">취소</button></div>';
+    btns='<div class="wi-btns"><button class="wi-btn wi-btn-r" onclick="event.stopPropagation();adminCancel('+x.id+')">취소</button><button class="wi-btn" style="background:#eef;color:#33a;" onclick="event.stopPropagation();editPhone('+x.id+')">📞 번호 수정</button></div>';
   }
   return '<div class="wait-card"><div class="wait-item'+(isSel?' wait-item-sel':'')+'" onclick="waitItemClick('+x.id+')"><div style="display:flex;gap:10px;"><div>'+checkEl+'</div><div style="flex:1;"><div class="wi-date-badge">'+fmtDate(x.reservation_date)+' · '+lbl+'</div><div class="wi-top"><span class="wi-name">'+(x.resident?.name||'—')+' 님</span></div><div class="wi-route">📍 '+x.departure?.name+' → '+x.arrival?.name+'<br>👥 '+x.persons+'명</div><div class="wi-bottom">'+srcBadge+usageBadge+'</div>'+btns+'</div></div></div></div>';
 }
@@ -1213,6 +1213,17 @@ window.adminConfirm=function(id){
     if(r.status===200)toast('💬 '+x.resident?.name+' 님께 확정 알림 발송');else toast(r.json?.error||'확정 실패');
     renderWaiting();
   });
+};
+window.editPhone=async function(id){
+  const x=waitingCache.find(r=>r.id===id);if(!x)return;
+  const cur=x.resident?.phone||'';
+  const np=prompt('새 연락처 입력 (끝 4자리 이상):\n현재: '+(cur||'(없음)'),cur);
+  if(np===null)return; // 취소
+  const digits=String(np).replace(/[^0-9]/g,'');
+  if(digits.length<4){toast('끝 4자리 이상 입력해주세요');return;}
+  const r=await api('/api/admin/reservations/'+id+'/phone',{method:'PATCH',body:{phone:np}});
+  if(r.status===200){toast('📞 연락처가 '+r.json.phone+'로 수정됨');renderWaiting();}
+  else toast(r.json?.error||'수정 실패');
 };
 window.adminCancel=function(id){
   const x=waitingCache.find(r=>r.id===id);if(!x)return;
@@ -1308,13 +1319,21 @@ function initManual(){
 }
 window.mStep=function(n){
   if(n>manualCur){
-    if(manualCur===1){const nm=$('m-name').value.trim();if(!nm){alert('이름을 입력해주세요');return;}manualSt.name=nm;manualSt.phone=$('m-phone').value.trim();if(!manualSt.phone){alert('전화번호를 입력해주세요');return;}}
+    if(manualCur===1){
+      const nm=$('m-name').value.trim();if(!nm){alert('이름을 입력해주세요');return;}manualSt.name=nm;
+      // 전화번호는 자유 형식 — 뒤 4자리 이상만 있으면 OK (010 안 채워도 됨)
+      const ph=$('m-phone').value.trim();
+      const digits=ph.replace(/[^0-9]/g,'');
+      if(digits.length<4){alert('전화번호 끝 4자리 이상 입력해주세요');return;}
+      manualSt.phone=ph;
+    }
     if(manualCur===2&&!manualSt.date){alert('날짜 선택');return;}
-    if(manualCur===3&&(!manualSt.dep_cat||!manualSt.dep_id)){alert('방향·출발지 선택');return;}
-    if(manualCur===4&&!manualSt.arr_id){alert('도착지 선택');return;}
+    if(manualCur===3&&!manualSt.dep_cat){alert('방향 선택');return;}
+    // 단계 4 검증 제거: pickDir에서 dep_id/arr_id 자동 채워짐
     if(manualCur===5&&!manualSt.hour){alert('시간 선택');return;}
   }
-  if(n===4) buildMArr();
+  // 4단계(거점 선택)는 자동 건너뜀 — 방향만 선택하면 카테고리 첫 거점 자동 배정
+  if(n===4) n = manualCur===3 ? 5 : 3;
   if(n===5) buildMTime();
   if(n===6) buildMPrs();
   manualCur=n;
@@ -1323,22 +1342,23 @@ window.mStep=function(n){
 };
 function updMStep(n){for(let i=1;i<=6;i++){$('sd'+i).className='sd'+(i<n?' dn':i===n?' on':'');}for(let j=1;j<=5;j++){$('stl'+j).className='stl'+(j<n?' dn':'');}}
 window.pickMDate=function(s){manualSt.date=s;document.querySelectorAll('#m-date-list .date-card').forEach(c=>c.classList.remove('selected'));$('m-dc-'+s).classList.add('selected');};
-window.pickDir=function(cat){manualSt.dep_cat=cat;manualSt.dep_id=0;manualSt.arr_id=0;
-  $('dir-cs').classList.toggle('on',cat==='cheongsanmyeon');$('dir-sc').classList.toggle('on',cat==='eupnae');
-  $('m-dep-lbl').textContent='출발지 ('+(cat==='cheongsanmyeon'?'청산면':'읍내')+') 선택';
-  const opts=LOCATIONS.filter(l=>l.category===cat);
-  $('m-dep-list').innerHTML=opts.map(l=>'<button class="loc-opt-btn" id="m-dep-'+l.id+'" onclick="pickMDep('+l.id+')"><span class="loc-icon">'+(l.emoji||'📍')+'</span><span style="flex:1;font-weight:700;">'+l.name+'</span><span class="loc-check">✓</span></button>').join('');
-  $('m-dep-wrap').style.display='block';
+window.pickDir=function(cat){
+  manualSt.dep_cat=cat;
+  $('dir-cs').classList.toggle('on',cat==='cheongsanmyeon');
+  $('dir-sc').classList.toggle('on',cat==='eupnae');
+  // 거점 선택 단계 제거 — 카테고리의 첫 활성 거점을 자동 배정
+  const opp=cat==='cheongsanmyeon'?'eupnae':'cheongsanmyeon';
+  const depFirst=LOCATIONS.find(l=>l.category===cat);
+  const arrFirst=LOCATIONS.find(l=>l.category===opp);
+  manualSt.dep_id=depFirst?.id||0;
+  manualSt.arr_id=arrFirst?.id||0;
+  // 거점 선택 UI는 숨김 (사장님 요청: 방면만 표시)
+  $('m-dep-wrap').style.display='none';
 };
-window.pickMDep=function(id){manualSt.dep_id=id;document.querySelectorAll('#m-dep-list .loc-opt-btn').forEach(b=>b.classList.remove('selected'));$('m-dep-'+id).classList.add('selected');};
-function buildMArr(){
-  if(!manualSt.dep_cat)return;
-  const opp=manualSt.dep_cat==='cheongsanmyeon'?'eupnae':'cheongsanmyeon';
-  $('m-arr-msub').textContent='도착지 ('+(opp==='cheongsanmyeon'?'청산면':'읍내')+') 선택';
-  const opts=LOCATIONS.filter(l=>l.category===opp);
-  $('m-arr-list').innerHTML=opts.map(l=>'<button class="loc-opt-btn" id="m-arr-'+l.id+'" onclick="pickMArr('+l.id+')"><span class="loc-icon">'+(l.emoji||'📍')+'</span><span style="flex:1;font-weight:700;">'+l.name+'</span><span class="loc-check">✓</span></button>').join('');
-}
-window.pickMArr=function(id){manualSt.arr_id=id;document.querySelectorAll('#m-arr-list .loc-opt-btn').forEach(b=>b.classList.remove('selected'));$('m-arr-'+id).classList.add('selected');};
+// 호환용 stub — 외부 호출 가능성 대비
+window.pickMDep=function(id){manualSt.dep_id=id;};
+window.pickMArr=function(id){manualSt.arr_id=id;};
+function buildMArr(){/* 도착지 선택 단계 제거 — pickDir에서 자동 배정 */}
 async function buildMTime(){
   const r=await api('/api/availability?date='+manualSt.date+'&origin='+manualSt.dep_cat);
   const slots=r.json?.slots||[];

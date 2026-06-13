@@ -135,8 +135,12 @@ export async function POST(request: Request) {
 
   const trimmedName = name?.trim();
   if (!trimmedName) return apiError("이름을 입력해 주세요.", 400);
-  const localPhone = phone ? normalizeKoreanMobile(phone) : null;
-  if (!localPhone) return apiError("올바른 휴대폰 번호를 입력해 주세요. (예: 010-1234-5678)", 400);
+  // 전화번호 자유 형식 — 숫자만 추출해서 최소 4자리만 있으면 OK (010 풀번호 강제 X)
+  const rawPhone = (phone ?? "").trim();
+  const digits = rawPhone.replace(/[^0-9]/g, "");
+  if (digits.length < 4) return apiError("전화번호 끝 4자리 이상은 입력해 주세요.", 400);
+  // 정규화 시도 — 한국 핸드폰 패턴이면 normalize, 아니면 입력 그대로 사용 (자유 형식 허용)
+  const localPhone = normalizeKoreanMobile(rawPhone) ?? rawPhone;
   if (!date || !isValidDateString(date)) return apiError("날짜를 선택해 주세요.", 400);
   if (typeof hour !== "number") return apiError("시간을 선택해 주세요.", 400);
   if (typeof departure_id !== "number" || typeof arrival_id !== "number")
