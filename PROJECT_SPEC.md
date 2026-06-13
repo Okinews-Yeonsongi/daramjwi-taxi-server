@@ -180,7 +180,7 @@ function assignVehicle(
 
 ```typescript
 async function canBook(input: BookingInput): Promise<Result> {
-  // 1. 날짜 범위 (오늘 포함 7일)
+  // 1. 날짜 범위 (오늘 포함 3일)
   const daysFromToday = differenceInDays(input.date, today());
   if (daysFromToday < 0 || daysFromToday > 6) return error('날짜 범위 벗어남');
 
@@ -434,7 +434,7 @@ $$ LANGUAGE plpgsql;
 | GET | `/api/availability?date=YYYY-MM-DD&origin=cheongsanmyeon` | 그 날짜+출발 카테고리의 시간별 활성/마감 |
 | GET | `/api/availability/seats?date=YYYY-MM-DD&hour=10&origin=cheongsanmyeon` | 인원 단계용 잔여석 |
 | POST | `/api/reservations` | 신청 (위 동시성 RPC 호출) |
-| GET | `/api/reservations/me` | 내 예약 (7일 이내, cancelled 제외) |
+| GET | `/api/reservations/me` | 내 예약 (3일 이내, cancelled 제외) |
 | PATCH | `/api/reservations/:id/cancel` | 본인 취소 |
 
 ### 7.4 운행·통계 (주민용)
@@ -642,7 +642,7 @@ Phase 9. PWA + 마무리
 
 ## 13. 주요 비즈니스 규칙 (반드시 강제)
 
-1. 신청 날짜는 오늘 포함 7일 이내 (오늘이 22일이면 22~28일)
+1. 신청 날짜는 오늘 포함 3일 이내 (오늘이 22일이면 22~28일)
 2. 신청 시간은 현재 시각보다 미래 (오후 2시면 같은 날 1시·2시 슬롯 불가)
 3. 출발지·도착지는 서로 다른 카테고리
 4. 한 운행 최대 4명 (합승은 같은 시간+같은 방향만)

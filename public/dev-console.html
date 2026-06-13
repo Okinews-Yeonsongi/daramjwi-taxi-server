@@ -994,7 +994,8 @@ function initBookingDate(){
   booking={date:'',depart_cat:'',depart_id:0,arrive_id:0,hour:0,persons:0};
   renderStepBar(1,'stepbar-1');
   let h='';
-  for(let i=0;i<7;i++){
+  // 신청 가능 창 = 오늘 포함 3일
+  for(let i=0;i<3;i++){
     const d=kstDate(i),s=ymd(d),dow=d.getUTCDay(),iw=dow===0||dow===6;
     h+='<div class="date-card'+(iw?' weekend':'')+'" id="dc-'+s+'" onclick="pickDate(\''+s+'\')"><div class="dc-left">'+(i===0?'<div class="dc-today-badge">오늘</div>':'<div class="dc-dow">'+DAYS[dow]+'요일</div>')+'<div class="dc-num">'+d.getUTCDate()+'</div></div><div class="dc-right"><div class="dc-full">'+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일</div></div><div class="dc-check">✓</div></div>';
   }
@@ -1295,7 +1296,8 @@ async function showWeekDetail(s){
 function initManual(){
   manualSt={name:'',phone:'',date:'',dep_cat:'',dep_id:0,arr_id:0,hour:0,persons:1};manualCur=1;
   $('m-name').value='';$('m-phone').value='';
-  let h='';for(let i=0;i<7;i++){const d=kstDate(i),s=ymd(d);
+  // 신청 가능 창 = 오늘 포함 3일
+  let h='';for(let i=0;i<3;i++){const d=kstDate(i),s=ymd(d);
     h+='<div class="date-card" id="m-dc-'+s+'" onclick="pickMDate(\''+s+'\')"><div class="dc-left">'+(i===0?'<div class="dc-today-badge">오늘</div>':'<div class="dc-dow">'+DAYS[d.getUTCDay()]+'요일</div>')+'<div class="dc-num">'+d.getUTCDate()+'</div></div><div class="dc-right"><div class="dc-full">'+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일</div></div><div class="dc-check">✓</div></div>';
   }
   $('m-date-list').innerHTML=h;

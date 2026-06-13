@@ -143,7 +143,7 @@ export async function POST(request: Request) {
     return apiError("출발지·도착지를 선택해 주세요.", 400);
   if (typeof persons !== "number" || persons < 1 || persons > 4)
     return apiError("인원은 1~4명이에요.", 400);
-  if (!isWithinBookingWindow(date)) return apiError("신청은 오늘부터 7일 이내만 가능해요.", 400);
+  if (!isWithinBookingWindow(date)) return apiError("신청은 오늘부터 3일 이내만 가능해요.", 400);
   if (!isSlotInFuture(date, hour)) return apiError("이미 지난 시간이에요. 다른 시간을 선택해 주세요.", 400);
 
   // 회원 자동 매칭: 같은 전화번호의 회원 있으면 그 user_id로 회원 예약 저장

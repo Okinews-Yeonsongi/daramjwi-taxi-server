@@ -22,13 +22,13 @@ function dateOnlyEpoch(dateStr: string): number {
   return Date.UTC(y, m - 1, day);
 }
 
-/** dateStr이 오늘 ~ 오늘+6 (KST) 범위인지 (= 신청 가능 7일 창) */
+/** dateStr이 오늘 ~ 오늘+2 (KST) 범위인지 (= 신청 가능 3일 창: 오늘 포함) */
 export function isWithinBookingWindow(dateStr: string): boolean {
   if (!isValidDateString(dateStr)) return false;
   const diff = Math.round(
     (dateOnlyEpoch(dateStr) - dateOnlyEpoch(kstTodayString())) / 86400000
   );
-  return diff >= 0 && diff <= 6;
+  return diff >= 0 && diff <= 2;
 }
 
 /** dateStr의 hour시 슬롯이 현재(KST)보다 미래인지 */

@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
   if (!isValidDateString(date)) return apiError("날짜 형식이 올바르지 않아요. (YYYY-MM-DD)", 400);
   if (!ORIGINS.includes(origin)) return apiError("출발 지역이 올바르지 않아요.", 400);
-  if (!isWithinBookingWindow(date)) return apiError("신청은 오늘부터 7일 이내만 가능해요.", 400);
+  if (!isWithinBookingWindow(date)) return apiError("신청은 오늘부터 3일 이내만 가능해요.", 400);
 
   const { data, error } = await auth.supabase.rpc("get_availability", {
     p_date: date,
