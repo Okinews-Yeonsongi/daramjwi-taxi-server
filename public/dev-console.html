@@ -91,7 +91,8 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
 .date-card{background:#fff;border-radius:var(--radius);border:3px solid var(--border);padding:16px 20px;display:flex;align-items:center;gap:18px;cursor:pointer;box-shadow:var(--shadow-sm);transition:all .15s;}
 .date-card.selected{background:var(--primary);border-color:var(--primary);box-shadow:0 6px 18px rgba(232,150,10,0.4);}
 .date-card.selected .dc-dow,.date-card.selected .dc-num,.date-card.selected .dc-full{color:#fff !important;}
-.date-card.weekend .dc-dow,.date-card.weekend .dc-num{color:var(--red);}
+.date-card.saturday .dc-dow,.date-card.saturday .dc-num{color:var(--blue);}
+.date-card.sunday .dc-dow,.date-card.sunday .dc-num{color:var(--red);}
 .dc-left{display:flex;flex-direction:column;align-items:center;min-width:68px;}
 .dc-dow{font-size:18px;font-weight:900;color:var(--text-muted);line-height:1;}
 .dc-num{font-size:50px;font-weight:900;color:var(--text);line-height:1;letter-spacing:-2px;}
@@ -260,6 +261,8 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
 .week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px;}
 .wday-col{display:flex;flex-direction:column;align-items:center;gap:3px;}
 .wday-h{font-size:10px;font-weight:700;color:var(--text-muted);margin-bottom:2px;}
+.wday-col.saturday .wday-h,.wday-col.saturday .wday-num{color:var(--blue);}
+.wday-col.sunday .wday-h,.wday-col.sunday .wday-num{color:var(--red);}
 .wday-cell{width:100%;min-height:60px;border-radius:10px;border:1.5px solid var(--border);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:6px 2px 4px;cursor:pointer;}
 .wday-cell.today{border:2px solid var(--primary);background:var(--primary-light);}
 .wday-cell.sel{background:var(--primary);border-color:var(--primary);}
@@ -996,8 +999,9 @@ function initBookingDate(){
   let h='';
   // 신청 가능 창 = 오늘 포함 3일
   for(let i=0;i<3;i++){
-    const d=kstDate(i),s=ymd(d),dow=d.getUTCDay(),iw=dow===0||dow===6;
-    h+='<div class="date-card'+(iw?' weekend':'')+'" id="dc-'+s+'" onclick="pickDate(\''+s+'\')"><div class="dc-left">'+(i===0?'<div class="dc-today-badge">오늘</div>':'<div class="dc-dow">'+DAYS[dow]+'요일</div>')+'<div class="dc-num">'+d.getUTCDate()+'</div></div><div class="dc-right"><div class="dc-full">'+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일</div></div><div class="dc-check">✓</div></div>';
+    const d=kstDate(i),s=ymd(d),dow=d.getUTCDay();
+    const dowCls=dow===6?' saturday':dow===0?' sunday':'';
+    h+='<div class="date-card'+dowCls+'" id="dc-'+s+'" onclick="pickDate(\''+s+'\')"><div class="dc-left">'+(i===0?'<div class="dc-today-badge">오늘</div>':'<div class="dc-dow">'+DAYS[dow]+'요일</div>')+'<div class="dc-num">'+d.getUTCDate()+'</div></div><div class="dc-right"><div class="dc-full">'+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일</div></div><div class="dc-check">✓</div></div>';
   }
   $('date-list').innerHTML=h;
   $('date-next-btn').disabled=true;
@@ -1275,9 +1279,10 @@ function renderMonthly(){
   $('week-label').textContent=monthLabel;
   let h='';
   for(let i=0;i<7;i++){
-    const d=new Date(start.getTime()+i*86400000),s=ymd(d);
+    const d=new Date(start.getTime()+i*86400000),s=ymd(d),dow=d.getUTCDay();
     const isTod=s===todayStr(),isSel=weekSel===s;
-    h+='<div class="wday-col"><div class="wday-h">'+DAYS[d.getUTCDay()]+'</div><div class="wday-cell'+(isTod?' today':'')+(isSel?' sel':'')+'" onclick="selWeekDay(\''+s+'\')"><div class="wday-num">'+d.getUTCDate()+'</div></div></div>';
+    const dowCls=dow===6?' saturday':dow===0?' sunday':'';
+    h+='<div class="wday-col'+dowCls+'"><div class="wday-h">'+DAYS[dow]+'</div><div class="wday-cell'+(isTod?' today':'')+(isSel?' sel':'')+'" onclick="selWeekDay(\''+s+'\')"><div class="wday-num">'+d.getUTCDate()+'</div></div></div>';
   }
   $('week-grid').innerHTML=h;
   if(weekSel)showWeekDetail(weekSel);else $('week-detail').style.display='none';
@@ -1308,8 +1313,10 @@ function initManual(){
   manualSt={name:'',phone:'',date:'',dep_cat:'',dep_id:0,arr_id:0,hour:0,persons:1};manualCur=1;
   $('m-name').value='';$('m-phone').value='';
   // 신청 가능 창 = 오늘 포함 3일
-  let h='';for(let i=0;i<3;i++){const d=kstDate(i),s=ymd(d);
-    h+='<div class="date-card" id="m-dc-'+s+'" onclick="pickMDate(\''+s+'\')"><div class="dc-left">'+(i===0?'<div class="dc-today-badge">오늘</div>':'<div class="dc-dow">'+DAYS[d.getUTCDay()]+'요일</div>')+'<div class="dc-num">'+d.getUTCDate()+'</div></div><div class="dc-right"><div class="dc-full">'+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일</div></div><div class="dc-check">✓</div></div>';
+  let h='';for(let i=0;i<3;i++){
+    const d=kstDate(i),s=ymd(d),dow=d.getUTCDay();
+    const dowCls=dow===6?' saturday':dow===0?' sunday':'';
+    h+='<div class="date-card'+dowCls+'" id="m-dc-'+s+'" onclick="pickMDate(\''+s+'\')"><div class="dc-left">'+(i===0?'<div class="dc-today-badge">오늘</div>':'<div class="dc-dow">'+DAYS[dow]+'요일</div>')+'<div class="dc-num">'+d.getUTCDate()+'</div></div><div class="dc-right"><div class="dc-full">'+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일</div></div><div class="dc-check">✓</div></div>';
   }
   $('m-date-list').innerHTML=h;
   document.querySelectorAll('.dir-btn').forEach(b=>b.classList.remove('on'));
