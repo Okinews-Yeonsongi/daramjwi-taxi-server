@@ -348,11 +348,19 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
     <p style="text-align:center;color:var(--text-muted);margin-bottom:20px;font-size:14px;">이름과 전화번호를 입력해주세요</p>
     <input class="fi" id="ob_name" placeholder="이름" style="font-size:18px;">
     <input class="fi" id="ob_phone" placeholder="010-0000-0000" type="tel" style="font-size:18px;">
+    <!-- 역할 선택 -->
+    <div style="margin-top:14px;">
+      <div style="font-size:14px;font-weight:700;color:#555;margin-bottom:8px;">어떤 역할로 가입하시나요?</div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn-outline" id="ob-role-r" onclick="pickObRole('resident')" style="flex:1;">👤 주민</button>
+        <button type="button" class="btn-outline" id="ob-role-a" onclick="pickObRole('admin')" style="flex:1;">🧑‍🔧 기사님</button>
+      </div>
+    </div>
     <!-- 기사님만 표시: 담당 차량 번호 입력 -->
     <div id="ob-vehicle-wrap" style="display:none;margin-top:14px;">
-      <div style="font-size:14px;font-weight:700;color:#555;margin-bottom:8px;">🚗 담당 차량 번호 (기사님)</div>
+      <div style="font-size:14px;font-weight:700;color:#555;margin-bottom:8px;">🚗 담당 차량 번호</div>
       <input class="fi" id="ob_vehicle_plate" placeholder="예: 51허 1234" style="font-size:16px;">
-      <div style="font-size:12px;color:#888;margin-top:6px;">처음 등록한 번호가 시스템에 저장됩니다. 나중에 프로필에서 변경 가능.</div>
+      <div style="font-size:12px;color:#888;margin-top:6px;">나중에 프로필에서 변경 가능.</div>
     </div>
   </div>
   <div class="action-bar" style="position:relative;">
@@ -846,10 +854,9 @@ async function completeLoginWithToken(token, needsOnb){
   // 푸시 권한 요청 (반복하지 않도록 첫 로그인 또는 미요청 상태면)
   try{await registerPushIfPossible();}catch(e){log('push 설정 실패',e);}
   if(needsOnb||me.json?.needsOnboarding){
-    // 온보딩: 카카오 닉네임은 이미 있고 전화번호만 받음
+    // 온보딩: 카카오 닉네임 자동 채움. 역할은 사용자가 직접 선택 (기본 '주민')
     if(me.json?.profile?.name)$('ob_name').value=me.json.profile.name;
-    // 기사님이면 차량 선택 UI 표시 (주민은 숨김)
-    $('ob-vehicle-wrap').style.display=(ROLE==='admin')?'block':'none';
+    pickObRole('resident'); // 기본 주민으로 초기화 (차량 필드 숨김)
     showOnly('screen-onboard');
     return;
   }
@@ -968,10 +975,23 @@ window.logout=function(){
   showOnly('screen-login');
   $('mode-tag').textContent='테스트 콘솔';
 };
+let obRole='resident';
+window.pickObRole=function(r){
+  obRole=r;
+  ROLE=r; // 이후 로직에서 사용
+  const isA=r==='admin';
+  $('ob-role-r').classList.toggle('selected',!isA);
+  $('ob-role-a').classList.toggle('selected',isA);
+  $('ob-role-r').style.background=!isA?'var(--primary)':'';
+  $('ob-role-r').style.color=!isA?'#fff':'';
+  $('ob-role-a').style.background=isA?'var(--primary)':'';
+  $('ob-role-a').style.color=isA?'#fff':'';
+  // 기사님이면 차량번호 필드 노출
+  $('ob-vehicle-wrap').style.display=isA?'block':'none';
+};
 window.submitOnboard=async function(){
-  const body={name:$('ob_name').value,phone:$('ob_phone').value};
-  // 기사님이면 차량번호 입력값 전송 (백엔드가 vehicles와 매칭·자동등록)
-  if(ROLE==='admin'){
+  const body={name:$('ob_name').value,phone:$('ob_phone').value,role:obRole};
+  if(obRole==='admin'){
     const plate=$('ob_vehicle_plate').value.trim();
     if(plate) body.vehicle_plate=plate;
   }

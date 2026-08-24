@@ -53,18 +53,23 @@ export async function POST(request: Request) {
   const auth = await getAuthUser(request);
   if (!auth) return apiError("로그인이 필요해요.", 401);
 
-  const body = await readJson<{ name?: string; phone?: string; vehicle_id?: number | null; vehicle_plate?: string | null }>(request);
+  const body = await readJson<{
+    name?: string;
+    phone?: string;
+    role?: "resident" | "admin";
+    vehicle_id?: number | null;
+    vehicle_plate?: string | null;
+  }>(request);
   const name = body?.name?.trim();
   if (!name) return apiError("이름을 입력해 주세요.", 400);
   if (name.length > 50) return apiError("이름이 너무 길어요.", 400);
 
-  // 이미 있으면 그대로 반환
+  // 이미 있는지 확인 (카카오 콜백에서 미리 만들어둔 경우 upsert 처리)
   const { data: existing } = await auth.supabase
     .from("profiles")
     .select("*")
     .eq("id", auth.user.id)
     .maybeSingle();
-  if (existing) return json({ profile: existing, created: false });
 
   // 전화번호: 인증된 번호(OTP) 우선, 없으면(카카오) 입력값 사용
   let phone = authPhoneToLocal(auth.user.phone);
@@ -76,19 +81,38 @@ export async function POST(request: Request) {
     phone = local;
   }
 
-  // 기사님(admin) 첫 로그인 시 담당 차량 지정 (온보딩 옵션)
-  // vehicle_plate 우선 (차량번호로 매칭·자동등록), 없으면 vehicle_id 직접 지정
+  // 역할 (기본 resident, admin 선택 가능)
+  const role: "resident" | "admin" = body?.role === "admin" ? "admin" : "resident";
+
+  // 담당 차량 (admin일 때만 의미. plate 우선 매칭·자동등록)
   let vehicleId: number | null = null;
-  if (body?.vehicle_plate) {
-    vehicleId = await resolveVehicleByPlate(body.vehicle_plate);
-    if (vehicleId == null) return apiError("등록 가능한 차량 자리가 없어요. 관리자에게 문의하세요.", 409);
-  } else if (typeof body?.vehicle_id === "number") {
-    vehicleId = body.vehicle_id;
+  if (role === "admin") {
+    if (body?.vehicle_plate) {
+      vehicleId = await resolveVehicleByPlate(body.vehicle_plate);
+      if (vehicleId == null) return apiError("등록 가능한 차량 자리가 없어요. 관리자에게 문의하세요.", 409);
+    } else if (typeof body?.vehicle_id === "number") {
+      vehicleId = body.vehicle_id;
+    }
+  }
+
+  if (existing) {
+    // 카카오 콜백이 만들어둔 미완성 프로필을 완성 (name/phone/role/vehicle_id 갱신)
+    const { data, error } = await auth.supabase
+      .from("profiles")
+      .update({ phone, name, role, vehicle_id: vehicleId, updated_at: new Date().toISOString() })
+      .eq("id", auth.user.id)
+      .select()
+      .single();
+    if (error) {
+      console.error("[profile POST] update 실패:", error.message);
+      return apiError("프로필 저장에 실패했어요.", 500);
+    }
+    return json({ profile: data, created: false });
   }
 
   const { data, error } = await auth.supabase
     .from("profiles")
-    .insert({ id: auth.user.id, phone, name, vehicle_id: vehicleId })
+    .insert({ id: auth.user.id, phone, name, role, vehicle_id: vehicleId })
     .select()
     .single();
 
