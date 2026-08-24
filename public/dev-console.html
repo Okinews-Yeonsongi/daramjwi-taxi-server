@@ -1346,14 +1346,117 @@ window.doMerge=async function(){
 window.closeM=function(id){$(id).classList.remove('on');};
 
 // ─── 기사님 오늘 운행 ───
-async function renderTodayRunAdmin(){
-  const r=await api('/api/runs/today');
-  const runs=r.json?.runs||[];
-  $('atoday-list').innerHTML=runs.length?runs.map(run=>{
-    const lbl=SLOTS.find(s=>s.hour===run.hour)?.label||run.hour+'시';
-    return '<div class="wait-card"><div class="wait-item"><div class="wi-date-badge">오늘 · '+lbl+'</div><div class="wi-route">📍 '+(run.origin==='cheongsanmyeon'?'청산면':'읍내')+' → '+(run.destination==='cheongsanmyeon'?'청산면':'읍내')+'<br>👥 '+run.persons+'명 (남은 '+run.seats_left+'석)</div></div></div>';
-  }).join(''):'<div class="empty">오늘 운행 없음</div>';
+// ─── 운행 액션 후 활성 화면 리로드 ───
+function refreshAfterTrip(){
+  // 오늘 운행 화면과 월별 캘린더 상세 중 활성인 쪽 갱신
+  if($('atoday-list'))renderTodayRunAdmin().catch(()=>{});
+  if(weekSel && $('week-detail')?.style.display!=='none')showWeekDetail(weekSel).catch(()=>{});
 }
+
+// ─── GPS 헬퍼 (Promise) ───
+function getGeo(){
+  return new Promise((resolve)=>{
+    if(!navigator.geolocation){resolve(null);return;}
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6)}),
+      _=>resolve(null),
+      {enableHighAccuracy:true,timeout:8000,maximumAge:5000}
+    );
+  });
+}
+
+// ─── 운행 카드 (오늘 운행 + 월별 상세 공통) ───
+// isToday=true 면 액션 버튼 활성, false 면 조회만
+function tripCardHTML(x, isToday){
+  const lbl=x.time_label||SLOTS.find(t=>t.hour===x.hour)?.label||x.hour+'시';
+  const dep=x.departure?.name||'-', arr=x.arrival?.name||'-';
+  const started=x.trip_started_at?new Date(x.trip_started_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):null;
+  const ended=x.trip_ended_at?new Date(x.trip_ended_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):null;
+  const stateBadge=ended?'<span class="res-badge" style="background:#e0e0e0;color:#555;">완료</span>':(started?'<span class="res-badge" style="background:#dcedc8;color:#33691e;">운행 중</span>':'<span class="res-badge" style="background:var(--primary-light);color:var(--primary-dark);">운행 전</span>');
+  const gpsBadge=(x.trip_start_lat&&x.trip_start_lng)?'📍':'';
+  const fareText=x.fare_amount?('💰 '+x.fare_amount.toLocaleString()+'원'):'';
+  const receiptBadge=x.has_receipt?'📸 영수증':'';
+  const trackLine=[
+    started?('출발 '+started):'',
+    ended?('· 도착 '+ended):'',
+    gpsBadge
+  ].filter(Boolean).join(' ');
+  let actions='';
+  if(isToday){
+    if(!started){
+      actions='<button class="wi-btn wi-btn-g" style="background:var(--primary);color:#fff;font-size:15px;padding:12px;" onclick="tripStart('+x.id+')">🚀 운행 시작</button>';
+    } else if(!ended){
+      actions='<button class="wi-btn wi-btn-g" style="background:var(--green);color:#fff;font-size:15px;padding:12px;" onclick="tripEnd('+x.id+')">🏁 운행 도착</button>';
+    } else {
+      actions='<div style="font-size:12px;color:#888;padding:4px 0;">운행 완료</div>';
+    }
+    actions+='<div style="display:flex;gap:6px;margin-top:8px;">'+
+      '<button class="wi-btn" style="background:#e8f0fe;color:#1a6ec4;flex:1;" onclick="editFare('+x.id+','+(x.fare_amount||0)+')">💰 금액</button>'+
+      '<button class="wi-btn" style="background:#fef3dc;color:var(--primary-dark);flex:1;" onclick="uploadReceipt('+x.id+')">📸 영수증</button>'+
+      (x.has_receipt?'<button class="wi-btn" style="background:#eee;color:#333;flex:1;" onclick="viewReceipt('+x.id+')">👁 보기</button>':'')+
+    '</div>';
+  }
+  return '<div class="wait-card" style="margin-bottom:10px;"><div class="wait-item"><div style="flex:1;">'+
+    '<div class="wi-date-badge" style="display:flex;justify-content:space-between;align-items:center;">'+lbl+' '+stateBadge+'</div>'+
+    '<div class="wi-top" style="margin-top:6px;"><span class="wi-name">'+(x.resident?.name||'-')+'</span></div>'+
+    '<div class="wi-route">📍 '+dep+' → '+arr+' · 👥 '+x.persons+'명</div>'+
+    (trackLine?'<div style="font-size:12px;color:#555;margin-top:4px;">⏱️ '+trackLine+'</div>':'')+
+    (fareText||receiptBadge?'<div style="font-size:12px;color:#333;margin-top:4px;">'+fareText+' '+receiptBadge+'</div>':'')+
+    (actions?'<div style="margin-top:10px;">'+actions+'</div>':'')+
+    '</div></div></div>';
+}
+
+async function renderTodayRunAdmin(){
+  // 오늘 확정된 개별 예약을 카드로 (aggregate 대신)
+  const today=todayStr();
+  const r=await api('/api/admin/reservations?status=confirmed&date='+today);
+  const list=r.json?.reservations||[];
+  $('atoday-list').innerHTML=list.length?list.map(x=>tripCardHTML(x,true)).join(''):'<div class="empty">오늘 확정 운행 없음</div>';
+}
+
+// ─── 운행 액션 함수들 ───
+window.tripStart=async function(id){
+  toast('📡 GPS 위치 확인 중…');
+  const g=await getGeo();
+  const r=await api('/api/admin/reservations/'+id+'/trip-start',{method:'POST',body:g||{}});
+  if(r.status===200){toast(g?'🚀 운행 시작 · GPS 저장':'🚀 운행 시작 (GPS 없이)');refreshAfterTrip();}
+  else toast(r.json?.error||'시작 기록 실패');
+};
+window.tripEnd=async function(id){
+  toast('📡 GPS 위치 확인 중…');
+  const g=await getGeo();
+  const r=await api('/api/admin/reservations/'+id+'/trip-end',{method:'POST',body:g||{}});
+  if(r.status===200){toast(g?'🏁 도착 · GPS 저장':'🏁 도착 (GPS 없이)');refreshAfterTrip();}
+  else toast(r.json?.error||'도착 기록 실패');
+};
+window.editFare=async function(id,cur){
+  const s=prompt('정산 금액(원)을 입력하세요:\n비우면 삭제됩니다.',cur?String(cur):'');
+  if(s===null)return;
+  const amt=parseInt(String(s).replace(/[^0-9]/g,''),10);
+  const body={amount:isNaN(amt)||amt<=0?null:amt};
+  const r=await api('/api/admin/reservations/'+id+'/fare',{method:'PATCH',body});
+  if(r.status===200){toast(body.amount?'💰 '+body.amount.toLocaleString()+'원 저장':'금액 삭제');refreshAfterTrip();}
+  else toast(r.json?.error||'저장 실패');
+};
+window.uploadReceipt=function(id){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';inp.capture='environment';
+  inp.onchange=async ()=>{
+    const file=inp.files?.[0];if(!file)return;
+    toast('📤 업로드 중…');
+    const fd=new FormData();fd.append('file',file);
+    const res=await fetch('/api/admin/reservations/'+id+'/receipt',{method:'POST',headers:{Authorization:'Bearer '+TOKEN},body:fd});
+    const j=await res.json().catch(()=>null);
+    if(res.status===200){toast('📸 영수증 업로드 완료');refreshAfterTrip();}
+    else toast(j?.error||'업로드 실패');
+  };
+  inp.click();
+};
+window.viewReceipt=async function(id){
+  const r=await api('/api/admin/reservations/'+id+'/receipt',{method:'GET'});
+  if(r.status===200&&r.json?.signed_url){window.open(r.json.signed_url,'_blank');}
+  else toast(r.json?.error||'영수증 없음');
+};
 
 // ─── 월별 캘린더 ───
 function renderMonthly(){
@@ -1386,10 +1489,10 @@ async function showWeekDetail(s){
   const d=new Date(s);$('week-detail-hd').textContent='📅 '+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일 ('+DAYS[d.getUTCDay()]+'요일)';
   const r=await api('/api/admin/reservations?date='+s);
   const list=(r.json?.reservations||[]).filter(x=>x.effective_status!=='cancelled');
-  $('week-detail-list').innerHTML=list.length?list.map(x=>{
-    const lbl=x.time_label||SLOTS.find(t=>t.hour===x.hour)?.label||x.hour+'시';
-    return '<div class="wait-item" style="border-bottom:1px solid var(--border);"><div class="wi-date-badge">'+lbl+'</div><div class="wi-top"><span class="wi-name">'+x.resident?.name+'</span><span class="res-badge badge-'+x.effective_status+'">'+({waiting:'대기',confirmed:'확정',completed:'완료'}[x.effective_status]||'')+'</span></div><div class="wi-route">'+x.departure?.name+' → '+x.arrival?.name+' · '+x.persons+'명</div></div>';
-  }).join(''):'<div class="empty">이날 신청이 없어요</div>';
+  const today=todayStr();
+  const isToday=(s===today);
+  // 오늘 날짜면 액션 버튼 활성(편집 가능), 과거·미래면 조회만
+  $('week-detail-list').innerHTML=list.length?list.map(x=>tripCardHTML(x,isToday)).join(''):'<div class="empty">이날 신청이 없어요</div>';
   $('week-detail').style.display='block';
 }
 
