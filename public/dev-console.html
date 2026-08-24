@@ -348,6 +348,15 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
     <p style="text-align:center;color:var(--text-muted);margin-bottom:20px;font-size:14px;">이름과 전화번호를 입력해주세요</p>
     <input class="fi" id="ob_name" placeholder="이름" style="font-size:18px;">
     <input class="fi" id="ob_phone" placeholder="010-0000-0000" type="tel" style="font-size:18px;">
+    <!-- 기사님만 표시: 담당 차량 선택 (숨김/표시는 JS에서 role 확인 후 결정) -->
+    <div id="ob-vehicle-wrap" style="display:none;margin-top:14px;">
+      <div style="font-size:14px;font-weight:700;color:#555;margin-bottom:8px;">담당 차량 선택 (기사님)</div>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="btn-outline" id="ob-veh-1" onclick="pickObVehicle(1)" style="flex:1;">🚗 A 차</button>
+        <button type="button" class="btn-outline" id="ob-veh-2" onclick="pickObVehicle(2)" style="flex:1;">🚙 B 차</button>
+      </div>
+      <div style="font-size:12px;color:#888;margin-top:6px;">나중에 프로필에서 변경할 수 있어요.</div>
+    </div>
   </div>
   <div class="action-bar" style="position:relative;">
     <button class="btn-primary" onclick="submitOnboard()">가입 완료 →</button>
@@ -548,6 +557,7 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div style="font-size:26px;">🐿️</div><span style="font-size:18px;font-weight:900;">다람쥐택시</span></div>
     <div style="font-size:20px;font-weight:800;margin-bottom:2px;">기사님 안녕하세요!</div>
     <div style="font-size:13px;color:rgba(255,255,255,.8);font-weight:500;" id="ahome-date"></div>
+    <div style="font-size:12px;color:rgba(255,255,255,.9);margin-top:6px;" id="ahome-vehicle"></div>
   </div>
   <div class="scroller">
     <div style="padding:14px 16px;">
@@ -841,6 +851,8 @@ async function completeLoginWithToken(token, needsOnb){
   if(needsOnb||me.json?.needsOnboarding){
     // 온보딩: 카카오 닉네임은 이미 있고 전화번호만 받음
     if(me.json?.profile?.name)$('ob_name').value=me.json.profile.name;
+    // 기사님이면 차량 선택 UI 표시 (주민은 숨김)
+    $('ob-vehicle-wrap').style.display=(ROLE==='admin')?'block':'none';
     showOnly('screen-onboard');
     return;
   }
@@ -959,8 +971,20 @@ window.logout=function(){
   showOnly('screen-login');
   $('mode-tag').textContent='테스트 콘솔';
 };
+let obVehicle=null;
+window.pickObVehicle=function(id){
+  obVehicle=id;
+  $('ob-veh-1').classList.toggle('selected',id===1);
+  $('ob-veh-2').classList.toggle('selected',id===2);
+  $('ob-veh-1').style.background=id===1?'var(--primary)':'';
+  $('ob-veh-1').style.color=id===1?'#fff':'';
+  $('ob-veh-2').style.background=id===2?'var(--primary)':'';
+  $('ob-veh-2').style.color=id===2?'#fff':'';
+};
 window.submitOnboard=async function(){
-  const r=await api('/api/profile',{method:'POST',body:{name:$('ob_name').value,phone:$('ob_phone').value}});
+  const body={name:$('ob_name').value,phone:$('ob_phone').value};
+  if(ROLE==='admin' && obVehicle) body.vehicle_id=obVehicle;
+  const r=await api('/api/profile',{method:'POST',body});
   if(r.status===201||r.status===200){toast('가입 완료');goTo(ROLE==='admin'?'home-admin':'home-resident');}
   else toast(r.json?.error||'가입 실패');
 };
@@ -1156,6 +1180,10 @@ async function refreshAdminHome(){
   const today=todayStr();
   const d=new Date(today);
   $('ahome-date').textContent=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+DAYS[d.getDay()]+'요일';
+  // 담당 차량 표시 (설정된 경우만)
+  const vid=ME?.profile?.vehicle_id;
+  const vcode=vid===1?'A':vid===2?'B':null;
+  $('ahome-vehicle').textContent=vcode?('🚗 담당 차량: '+vcode+' 차'):'⚠️ 담당 차량 미설정 (모든 예약 표시)';
   const dash=await api('/api/admin/dashboard');
   const j=dash.json;
   if(j){

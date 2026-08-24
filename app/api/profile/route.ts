@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const auth = await getAuthUser(request);
   if (!auth) return apiError("로그인이 필요해요.", 401);
 
-  const body = await readJson<{ name?: string; phone?: string }>(request);
+  const body = await readJson<{ name?: string; phone?: string; vehicle_id?: number | null }>(request);
   const name = body?.name?.trim();
   if (!name) return apiError("이름을 입력해 주세요.", 400);
   if (name.length > 50) return apiError("이름이 너무 길어요.", 400);
@@ -42,9 +42,12 @@ export async function POST(request: Request) {
     phone = local;
   }
 
+  // 기사님(admin) 첫 로그인 시 담당 차량 선택 지원 (온보딩 옵션)
+  const vehicleId = typeof body?.vehicle_id === "number" ? body.vehicle_id : null;
+
   const { data, error } = await auth.supabase
     .from("profiles")
-    .insert({ id: auth.user.id, phone, name })
+    .insert({ id: auth.user.id, phone, name, vehicle_id: vehicleId })
     .select()
     .single();
 
@@ -66,7 +69,7 @@ export async function PATCH(request: Request) {
   const auth = await getAuthUser(request);
   if (!auth) return apiError("로그인이 필요해요.", 401);
 
-  const body = await readJson<{ name?: string }>(request);
+  const body = await readJson<{ name?: string; vehicle_id?: number | null }>(request);
   const patch: ProfileUpdate = {};
 
   if (body?.name !== undefined) {
@@ -74,6 +77,14 @@ export async function PATCH(request: Request) {
     if (!name) return apiError("이름은 비울 수 없어요.", 400);
     if (name.length > 50) return apiError("이름이 너무 길어요.", 400);
     patch.name = name;
+  }
+
+  // 기사님 담당 차량 변경 (본인만, admin만 의미 있음. 다른 role은 컬럼 그대로 NULL)
+  if (body?.vehicle_id !== undefined) {
+    if (body.vehicle_id !== null && !Number.isInteger(body.vehicle_id)) {
+      return apiError("차량 ID가 올바르지 않아요.", 400);
+    }
+    patch.vehicle_id = body.vehicle_id;
   }
 
   if (Object.keys(patch).length === 0) {

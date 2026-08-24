@@ -36,6 +36,7 @@ export interface Database {
           kakao_id: string | null;
           kakao_nickname: string | null;
           kakao_profile_image: string | null;
+          vehicle_id: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -48,6 +49,7 @@ export interface Database {
           kakao_id?: string | null;
           kakao_nickname?: string | null;
           kakao_profile_image?: string | null;
+          vehicle_id?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -60,6 +62,7 @@ export interface Database {
           kakao_id?: string | null;
           kakao_nickname?: string | null;
           kakao_profile_image?: string | null;
+          vehicle_id?: number | null;
           created_at?: string;
           updated_at?: string;
         };

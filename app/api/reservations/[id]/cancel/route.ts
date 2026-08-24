@@ -85,9 +85,9 @@ export async function PATCH(
     // case 3: 항상 본인에게 취소 확인
     await notifyResidentSelfCancelled(party);
 
-    // case 4: 확정 예약 본인 취소면 기사님에게도
+    // case 4: 확정 예약 본인 취소면 담당 차량 기사님에게 (없으면 전원 fallback)
     if (existing.status === "confirmed") {
-      await notifyAdminSelfCancel({ ...party, persons: existing.persons });
+      await notifyAdminSelfCancel({ ...party, persons: existing.persons, vehicleId: existing.vehicle_id });
     }
   } catch (e) {
     console.error("[cancel] 알림 스텁 실패(무시):", (e as Error).message);

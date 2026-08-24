@@ -87,3 +87,25 @@ export async function sendPushToAllAdmins(payload: PushPayload): Promise<number>
   }
   return total;
 }
+
+/** 특정 차량 담당 기사님들에게만 발송 — 없거나 vehicleId가 null이면 전원(fallback) */
+export async function sendPushToVehicleOwner(
+  vehicleId: number | null,
+  payload: PushPayload
+): Promise<number> {
+  if (vehicleId == null) return sendPushToAllAdmins(payload);
+  ensureConfigured();
+  const admin = createAdminClient();
+  const { data: owners } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("role", "admin")
+    .eq("vehicle_id", vehicleId);
+  if (!owners || owners.length === 0) return sendPushToAllAdmins(payload); // 담당자 없으면 fallback
+  let total = 0;
+  for (const o of owners) {
+    const r = await sendPushToUser(o.id, payload);
+    total += r.sent;
+  }
+  return total;
+}

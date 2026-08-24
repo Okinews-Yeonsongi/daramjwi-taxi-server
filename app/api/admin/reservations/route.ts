@@ -35,12 +35,13 @@ const BOOK_ERRORS: Record<string, { msg: string; status: number }> = {
 export async function GET(request: Request) {
   const guard = await requireAdmin(request);
   if ("error" in guard) return guard.error;
-  const { db } = guard;
+  const { db, vehicleId } = guard;
 
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
   const date = url.searchParams.get("date");
   const includePast = url.searchParams.get("include_past") === "1"; // 과거 데이터까지 보고 싶을 때만
+  const allVehicles = url.searchParams.get("all_vehicles") === "1"; // 담당 아닌 예약까지 볼 때
   if (status && !STATUSES.includes(status as ReservationStatus)) return apiError("status 값이 올바르지 않아요.", 400);
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return apiError("date 형식이 올바르지 않아요.", 400);
 
@@ -54,6 +55,11 @@ export async function GET(request: Request) {
   if (date) q = q.eq("reservation_date", date);
   // 기본: 오늘 이후만 (과거 신청은 처리 불가). 통계/캘린더용으로는 ?include_past=1 또는 ?date=...
   if (!includePast && !date) q = q.gte("reservation_date", kstTodayString());
+  // 담당 차량 있는 기사님은 자기 차량 예약만 (미배정도 포함). vehicle_id NULL 기사님은 전체 봄.
+  // ?all_vehicles=1 이면 담당 있어도 전체 봄 (관리자 모드)
+  if (vehicleId != null && !allVehicles) {
+    q = q.or(`vehicle_id.eq.${vehicleId},vehicle_id.is.null`);
+  }
 
   const [resvRes, profRes, locRes, slotRes, vehRes, monthlyMap] = await Promise.all([
     q,

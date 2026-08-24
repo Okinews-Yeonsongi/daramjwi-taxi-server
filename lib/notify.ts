@@ -5,7 +5,7 @@
 // 알림 실패가 본 기능(예약/취소)에 영향을 주지 않도록 호출부에서 try/catch 합니다.
 // 문구는 PROJECT_SPEC 9.2 템플릿 기준.
 
-import { sendPushToUser, sendPushToAllAdmins } from "@/lib/push";
+import { sendPushToUser, sendPushToAllAdmins, sendPushToVehicleOwner } from "@/lib/push";
 
 type Party = {
   residentName: string;
@@ -72,7 +72,7 @@ export async function notifyResidentSelfCancelled(info: Party & { userId?: strin
   }
 }
 
-/** 주민이 '확정된' 예약을 본인 취소 → 기사님에게 */
+/** 주민이 '확정된' 예약을 본인 취소 → 담당 차량 기사님에게 (없으면 전원) */
 export async function notifyAdminSelfCancel(info: {
   residentName: string;
   date: string;
@@ -81,13 +81,14 @@ export async function notifyAdminSelfCancel(info: {
   departureName: string;
   arrivalName: string;
   persons: number;
+  vehicleId?: number | null; // 담당 기사님만 알림 (없으면 전원 fallback)
 }): Promise<void> {
   const time = timeText(info.hour, info.minute);
   console.log(
     `[SMS-STUB→기사님] ${info.residentName}님이 ${info.date} ${time} 예약을 취소했어요. ` +
       `노선: ${info.departureName}→${info.arrivalName}, 인원 ${info.persons}명.`
   );
-  await sendPushToAllAdmins({
+  await sendPushToVehicleOwner(info.vehicleId ?? null, {
     title: "⚠️ 확정 예약 취소",
     body: `${info.residentName}님 · ${info.date} ${time} · ${info.persons}명 · ${info.departureName}→${info.arrivalName}`,
     tag: `admin-cancel-${info.date}-${info.hour}`,

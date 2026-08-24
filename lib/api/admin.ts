@@ -14,20 +14,23 @@ type ReservationRow = Database["public"]["Tables"]["reservations"]["Row"];
  */
 export async function requireAdmin(
   request: Request
-): Promise<{ error: Response } | { auth: AuthCtx; db: SupabaseClient<Database> }> {
+): Promise<
+  | { error: Response }
+  | { auth: AuthCtx; db: SupabaseClient<Database>; vehicleId: number | null }
+> {
   const auth = await getAuthUser(request);
   if (!auth) return { error: apiError("로그인이 필요해요.", 401) };
 
   const { data: prof } = await auth.supabase
     .from("profiles")
-    .select("role")
+    .select("role, vehicle_id")
     .eq("id", auth.user.id)
     .maybeSingle();
 
   if (!prof || prof.role !== "admin") {
     return { error: apiError("관리자 권한이 필요해요.", 403) };
   }
-  return { auth, db: createAdminClient() };
+  return { auth, db: createAdminClient(), vehicleId: prof.vehicle_id ?? null };
 }
 
 /** 알림 문구에 쓸 주민 이름/전화 + 출발·도착 장소명 조회 (회원/전화예약 모두 지원) */

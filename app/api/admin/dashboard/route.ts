@@ -10,12 +10,15 @@ import { DAILY_LIMIT, MONTHLY_LIMIT, FARE_WON } from "@/lib/constants";
 export async function GET(request: Request) {
   const guard = await requireAdmin(request);
   if ("error" in guard) return guard.error;
-  const { db } = guard;
+  const { db, vehicleId } = guard;
 
   const today = kstTodayString();
   const { start, nextStart } = monthBounds(today);
 
-  const todayRes = await db.from("reservations").select("status, persons").eq("reservation_date", today);
+  // 담당 차량 있는 기사님은 자기 차량 예약 + 미배정만 봄, NULL 기사님은 전체
+  let todayQ = db.from("reservations").select("status, persons, vehicle_id").eq("reservation_date", today);
+  if (vehicleId != null) todayQ = todayQ.or(`vehicle_id.eq.${vehicleId},vehicle_id.is.null`);
+  const todayRes = await todayQ;
   if (todayRes.error) {
     console.error("[admin dashboard] 조회 실패:", todayRes.error.message);
     return apiError("대시보드를 불러오지 못했어요.", 500);
@@ -29,12 +32,14 @@ export async function GET(request: Request) {
     if (r.status === "confirmed") confirmedPersons += r.persons;
   }
 
-  // 오늘 이후(미래 포함) 대기 건수 — 기사님이 처리해야 할 총량
-  const pendingRes = await db
+  // 오늘 이후(미래 포함) 대기 건수 — 담당 차량 기준
+  let pendingQ = db
     .from("reservations")
     .select("id", { count: "exact", head: true })
     .eq("status", "waiting")
     .gte("reservation_date", today);
+  if (vehicleId != null) pendingQ = pendingQ.or(`vehicle_id.eq.${vehicleId},vehicle_id.is.null`);
+  const pendingRes = await pendingQ;
   const pendingTotal = pendingRes.count ?? 0;
 
   // 한도는 "운행 횟수" 기준 (합승 1회)
