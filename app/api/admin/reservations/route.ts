@@ -108,6 +108,15 @@ export async function GET(request: Request) {
       cancel_reason: r.cancel_reason,
       confirmed_at: r.confirmed_at,
       cancelled_at: r.cancelled_at,
+      // 운행 이력 (0016)
+      trip_started_at: r.trip_started_at,
+      trip_start_lat: r.trip_start_lat,
+      trip_start_lng: r.trip_start_lng,
+      trip_ended_at: r.trip_ended_at,
+      trip_end_lat: r.trip_end_lat,
+      trip_end_lng: r.trip_end_lng,
+      fare_amount: r.fare_amount,
+      has_receipt: !!r.receipt_image_path,
       created_at: r.created_at,
     };
   });
