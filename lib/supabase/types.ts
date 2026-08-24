@@ -102,9 +102,9 @@ export interface Database {
         Relationships: [];
       };
       vehicles: {
-        Row: { id: number; code: VehicleCode; is_active: boolean };
-        Insert: { id?: number; code: VehicleCode; is_active?: boolean };
-        Update: { id?: number; code?: VehicleCode; is_active?: boolean };
+        Row: { id: number; code: VehicleCode; is_active: boolean; plate_number: string | null };
+        Insert: { id?: number; code: VehicleCode; is_active?: boolean; plate_number?: string | null };
+        Update: { id?: number; code?: VehicleCode; is_active?: boolean; plate_number?: string | null };
         Relationships: [];
       };
       locations: {

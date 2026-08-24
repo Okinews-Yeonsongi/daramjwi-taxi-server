@@ -1,7 +1,41 @@
 import { getAuthUser } from "@/lib/supabase/user";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { json, apiError, readJson } from "@/lib/api/http";
 import { authPhoneToLocal, normalizeKoreanMobile } from "@/lib/api/phone";
 import type { Database } from "@/lib/supabase/types";
+
+/**
+ * 차량번호(plate)를 받아서 vehicles와 매칭하고 vehicle_id 반환.
+ * 매칭되는 row 있으면 그 id, 없으면 빈 slot(plate_number NULL)에 등록해서 그 id.
+ * 빈 slot 없으면 null 반환 (차량 초과).
+ */
+async function resolveVehicleByPlate(plate: string): Promise<number | null> {
+  const admin = createAdminClient();
+  const trimmed = plate.trim();
+  if (!trimmed) return null;
+
+  // 1) 이미 등록된 번호인지
+  const { data: existing } = await admin
+    .from("vehicles")
+    .select("id")
+    .eq("plate_number", trimmed)
+    .maybeSingle();
+  if (existing) return existing.id;
+
+  // 2) 빈 slot (plate_number NULL)에 등록
+  const { data: empty } = await admin
+    .from("vehicles")
+    .select("id")
+    .is("plate_number", null)
+    .eq("is_active", true)
+    .order("id", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!empty) return null; // 빈 자리 없음
+
+  await admin.from("vehicles").update({ plate_number: trimmed }).eq("id", empty.id);
+  return empty.id;
+}
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
@@ -19,7 +53,7 @@ export async function POST(request: Request) {
   const auth = await getAuthUser(request);
   if (!auth) return apiError("로그인이 필요해요.", 401);
 
-  const body = await readJson<{ name?: string; phone?: string; vehicle_id?: number | null }>(request);
+  const body = await readJson<{ name?: string; phone?: string; vehicle_id?: number | null; vehicle_plate?: string | null }>(request);
   const name = body?.name?.trim();
   if (!name) return apiError("이름을 입력해 주세요.", 400);
   if (name.length > 50) return apiError("이름이 너무 길어요.", 400);
@@ -42,8 +76,15 @@ export async function POST(request: Request) {
     phone = local;
   }
 
-  // 기사님(admin) 첫 로그인 시 담당 차량 선택 지원 (온보딩 옵션)
-  const vehicleId = typeof body?.vehicle_id === "number" ? body.vehicle_id : null;
+  // 기사님(admin) 첫 로그인 시 담당 차량 지정 (온보딩 옵션)
+  // vehicle_plate 우선 (차량번호로 매칭·자동등록), 없으면 vehicle_id 직접 지정
+  let vehicleId: number | null = null;
+  if (body?.vehicle_plate) {
+    vehicleId = await resolveVehicleByPlate(body.vehicle_plate);
+    if (vehicleId == null) return apiError("등록 가능한 차량 자리가 없어요. 관리자에게 문의하세요.", 409);
+  } else if (typeof body?.vehicle_id === "number") {
+    vehicleId = body.vehicle_id;
+  }
 
   const { data, error } = await auth.supabase
     .from("profiles")
@@ -69,7 +110,7 @@ export async function PATCH(request: Request) {
   const auth = await getAuthUser(request);
   if (!auth) return apiError("로그인이 필요해요.", 401);
 
-  const body = await readJson<{ name?: string; vehicle_id?: number | null }>(request);
+  const body = await readJson<{ name?: string; vehicle_id?: number | null; vehicle_plate?: string | null }>(request);
   const patch: ProfileUpdate = {};
 
   if (body?.name !== undefined) {
@@ -79,8 +120,16 @@ export async function PATCH(request: Request) {
     patch.name = name;
   }
 
-  // 기사님 담당 차량 변경 (본인만, admin만 의미 있음. 다른 role은 컬럼 그대로 NULL)
-  if (body?.vehicle_id !== undefined) {
+  // 기사님 담당 차량 변경 — plate 우선 (매칭·자동등록), 없으면 vehicle_id
+  if (body?.vehicle_plate !== undefined) {
+    if (body.vehicle_plate === null || body.vehicle_plate.trim() === "") {
+      patch.vehicle_id = null;
+    } else {
+      const vid = await resolveVehicleByPlate(body.vehicle_plate);
+      if (vid == null) return apiError("등록 가능한 차량 자리가 없어요.", 409);
+      patch.vehicle_id = vid;
+    }
+  } else if (body?.vehicle_id !== undefined) {
     if (body.vehicle_id !== null && !Number.isInteger(body.vehicle_id)) {
       return apiError("차량 ID가 올바르지 않아요.", 400);
     }

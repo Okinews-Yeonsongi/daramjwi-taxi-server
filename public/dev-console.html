@@ -348,14 +348,11 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
     <p style="text-align:center;color:var(--text-muted);margin-bottom:20px;font-size:14px;">이름과 전화번호를 입력해주세요</p>
     <input class="fi" id="ob_name" placeholder="이름" style="font-size:18px;">
     <input class="fi" id="ob_phone" placeholder="010-0000-0000" type="tel" style="font-size:18px;">
-    <!-- 기사님만 표시: 담당 차량 선택 (숨김/표시는 JS에서 role 확인 후 결정) -->
+    <!-- 기사님만 표시: 담당 차량 번호 입력 -->
     <div id="ob-vehicle-wrap" style="display:none;margin-top:14px;">
-      <div style="font-size:14px;font-weight:700;color:#555;margin-bottom:8px;">담당 차량 선택 (기사님)</div>
-      <div style="display:flex;gap:10px;">
-        <button type="button" class="btn-outline" id="ob-veh-1" onclick="pickObVehicle(1)" style="flex:1;">🚗 A 차</button>
-        <button type="button" class="btn-outline" id="ob-veh-2" onclick="pickObVehicle(2)" style="flex:1;">🚙 B 차</button>
-      </div>
-      <div style="font-size:12px;color:#888;margin-top:6px;">나중에 프로필에서 변경할 수 있어요.</div>
+      <div style="font-size:14px;font-weight:700;color:#555;margin-bottom:8px;">🚗 담당 차량 번호 (기사님)</div>
+      <input class="fi" id="ob_vehicle_plate" placeholder="예: 51허 1234" style="font-size:16px;">
+      <div style="font-size:12px;color:#888;margin-top:6px;">처음 등록한 번호가 시스템에 저장됩니다. 나중에 프로필에서 변경 가능.</div>
     </div>
   </div>
   <div class="action-bar" style="position:relative;">
@@ -971,19 +968,13 @@ window.logout=function(){
   showOnly('screen-login');
   $('mode-tag').textContent='테스트 콘솔';
 };
-let obVehicle=null;
-window.pickObVehicle=function(id){
-  obVehicle=id;
-  $('ob-veh-1').classList.toggle('selected',id===1);
-  $('ob-veh-2').classList.toggle('selected',id===2);
-  $('ob-veh-1').style.background=id===1?'var(--primary)':'';
-  $('ob-veh-1').style.color=id===1?'#fff':'';
-  $('ob-veh-2').style.background=id===2?'var(--primary)':'';
-  $('ob-veh-2').style.color=id===2?'#fff':'';
-};
 window.submitOnboard=async function(){
   const body={name:$('ob_name').value,phone:$('ob_phone').value};
-  if(ROLE==='admin' && obVehicle) body.vehicle_id=obVehicle;
+  // 기사님이면 차량번호 입력값 전송 (백엔드가 vehicles와 매칭·자동등록)
+  if(ROLE==='admin'){
+    const plate=$('ob_vehicle_plate').value.trim();
+    if(plate) body.vehicle_plate=plate;
+  }
   const r=await api('/api/profile',{method:'POST',body});
   if(r.status===201||r.status===200){toast('가입 완료');goTo(ROLE==='admin'?'home-admin':'home-resident');}
   else toast(r.json?.error||'가입 실패');
@@ -1180,10 +1171,11 @@ async function refreshAdminHome(){
   const today=todayStr();
   const d=new Date(today);
   $('ahome-date').textContent=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+DAYS[d.getDay()]+'요일';
-  // 담당 차량 표시 (설정된 경우만)
+  // 담당 차량 표시 (번호판 우선, 없으면 A/B 코드)
+  const plate=ME?.profile?.vehicle_plate;
   const vid=ME?.profile?.vehicle_id;
   const vcode=vid===1?'A':vid===2?'B':null;
-  $('ahome-vehicle').textContent=vcode?('🚗 담당 차량: '+vcode+' 차'):'⚠️ 담당 차량 미설정 (모든 예약 표시)';
+  $('ahome-vehicle').textContent=plate?('🚗 담당 차량: '+plate):(vcode?('🚗 담당 차량: '+vcode+' 차 (번호 미등록)'):'⚠️ 담당 차량 미설정 (모든 예약 표시)');
   const dash=await api('/api/admin/dashboard');
   const j=dash.json;
   if(j){

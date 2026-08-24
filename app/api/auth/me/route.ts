@@ -16,9 +16,20 @@ export async function GET(request: Request) {
     .eq("id", auth.user.id)
     .maybeSingle();
 
+  // 담당 차량 번호판 (기사님이 vehicle_id 있으면)
+  let vehiclePlate: string | null = null;
+  if (profile?.vehicle_id) {
+    const { data: v } = await auth.supabase
+      .from("vehicles")
+      .select("plate_number")
+      .eq("id", profile.vehicle_id)
+      .maybeSingle();
+    vehiclePlate = v?.plate_number ?? null;
+  }
+
   return json({
     user: { id: auth.user.id, phone: authPhoneToLocal(auth.user.phone) },
-    profile: profile ?? null,
+    profile: profile ? { ...profile, vehicle_plate: vehiclePlate } : null,
     needsOnboarding: !profile,
   });
 }
