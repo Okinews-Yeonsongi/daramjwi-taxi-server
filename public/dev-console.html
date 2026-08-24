@@ -1166,16 +1166,38 @@ window.cancelMyRes=async function(id){
   renderMyReservations();
 };
 
+// ─── 기사님 담당 차량 편집 ───
+window.editMyVehicle=async function(){
+  const cur=ME?.profile?.vehicle_plate||'';
+  const np=prompt('담당 차량번호를 입력하세요:\n예) 51허 1234\n\n비우면 담당 해제됩니다.',cur);
+  if(np===null)return; // 취소
+  const body={vehicle_plate:np.trim()||null};
+  const r=await api('/api/profile',{method:'PATCH',body});
+  if(r.status===200){
+    toast(np.trim()?('🚗 담당 차량 등록: '+np.trim()):'담당 차량 해제됨');
+    // ME 갱신
+    const me=await api('/api/auth/me');
+    ME=me.json;
+    refreshAdminHome();
+  } else {
+    toast(r.json?.error||'등록 실패');
+  }
+};
+
 // ─── 기사님 홈 ───
 async function refreshAdminHome(){
   const today=todayStr();
   const d=new Date(today);
   $('ahome-date').textContent=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+DAYS[d.getDay()]+'요일';
-  // 담당 차량 표시 (번호판 우선, 없으면 A/B 코드)
+  // 담당 차량 표시 (번호판 우선, 없으면 A/B 코드). 클릭하면 편집 가능.
   const plate=ME?.profile?.vehicle_plate;
   const vid=ME?.profile?.vehicle_id;
   const vcode=vid===1?'A':vid===2?'B':null;
-  $('ahome-vehicle').textContent=plate?('🚗 담당 차량: '+plate):(vcode?('🚗 담당 차량: '+vcode+' 차 (번호 미등록)'):'⚠️ 담당 차량 미설정 (모든 예약 표시)');
+  const label=plate?('🚗 담당 차량: '+plate+' ✎'):(vcode?('🚗 담당 차량: '+vcode+' 차 (번호 미등록 ✎)'):'⚠️ 담당 차량 미설정 — 눌러서 등록 ✎');
+  $('ahome-vehicle').textContent=label;
+  $('ahome-vehicle').style.cursor='pointer';
+  $('ahome-vehicle').style.textDecoration='underline';
+  $('ahome-vehicle').onclick=editMyVehicle;
   const dash=await api('/api/admin/dashboard');
   const j=dash.json;
   if(j){
