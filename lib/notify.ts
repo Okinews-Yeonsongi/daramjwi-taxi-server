@@ -15,23 +15,38 @@ type Party = {
   minute?: number;
   departureName: string;
   arrivalName: string;
+  vehiclePlate?: string | null;
+  vehicleCode?: string | null;
 };
 
 function timeText(h: number, m?: number): string {
   return m && m > 0 ? `${h}시 ${m}분` : `${h}시`;
 }
 
-/** 기사님 확정 → 주민에게 */
+/** 차량 정보 표시: 번호판 우선, 없으면 A/B 차, 아무것도 없으면 빈 문자열 */
+function vehicleText(plate?: string | null, code?: string | null): string {
+  if (plate) return `차량: ${plate}`;
+  if (code) return `차량: ${code}차`;
+  return "";
+}
+
+/** 기사님 확정 → 주민에게 (차량번호 포함) */
 export async function notifyResidentConfirmed(info: Party & { userId?: string }): Promise<void> {
   const time = timeText(info.hour, info.minute);
+  const veh = vehicleText(info.vehiclePlate, info.vehicleCode);
+  const vehSuffix = veh ? ` [${veh}]` : "";
   console.log(
     `[SMS-STUB→${info.residentPhone}] ${info.residentName}님, ${info.date} ${time} ` +
-      `탑승 예약이 확정되었어요. 출발: ${info.departureName}, 도착: ${info.arrivalName}.`
+      `탑승 예약이 확정되었어요. 출발: ${info.departureName}, 도착: ${info.arrivalName}.${vehSuffix}`
   );
   if (info.userId) {
+    // 푸시 body 2줄: 시간·노선 / 차량번호
+    const body = veh
+      ? `${info.date} ${time} · ${info.departureName} → ${info.arrivalName}\n🚗 ${veh}`
+      : `${info.date} ${time} · ${info.departureName} → ${info.arrivalName}`;
     await sendPushToUser(info.userId, {
       title: "✅ 예약 확정",
-      body: `${info.date} ${time} · ${info.departureName} → ${info.arrivalName}`,
+      body,
       tag: `confirm-${info.date}-${info.hour}`,
       url: "/dev-console.html#/my-reservations",
     }).catch((e) => console.warn("[push] confirm 실패:", (e as Error).message));

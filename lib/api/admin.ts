@@ -33,7 +33,7 @@ export async function requireAdmin(
   return { auth, db: createAdminClient(), vehicleId: prof.vehicle_id ?? null };
 }
 
-/** 알림 문구에 쓸 주민 이름/전화 + 출발·도착 장소명 조회 (회원/전화예약 모두 지원) */
+/** 알림 문구에 쓸 주민 이름/전화 + 출발·도착 장소명 + 배정 차량번호 조회 */
 export async function loadNotifyParties(
   db: SupabaseClient<Database>,
   r: ReservationRow
@@ -57,6 +57,19 @@ export async function loadNotifyParties(
     residentPhone = prof?.phone ?? residentPhone;
   }
 
+  // 배정 차량 번호판 (없으면 A/B 코드)
+  let vehiclePlate: string | null = null;
+  let vehicleCode: string | null = null;
+  if (r.vehicle_id) {
+    const { data: v } = await db
+      .from("vehicles")
+      .select("code, plate_number")
+      .eq("id", r.vehicle_id)
+      .maybeSingle();
+    vehiclePlate = v?.plate_number ?? null;
+    vehicleCode = v?.code ?? null;
+  }
+
   return {
     residentName,
     residentPhone,
@@ -64,8 +77,10 @@ export async function loadNotifyParties(
     arrivalName: nameOf(r.arrival_location_id),
     date: r.reservation_date,
     hour: r.hour,
-    minute: r.departure_minute, // 합치기로 분 조정된 경우 반영
-    userId: r.user_id ?? undefined, // 푸시 발송용 (전화예약은 푸시 대상 X)
+    minute: r.departure_minute,
+    userId: r.user_id ?? undefined,
+    vehiclePlate, // 예: "51허 1234"
+    vehicleCode,  // 예: "A" / "B" (plate 미등록 시 fallback)
   };
 }
 
