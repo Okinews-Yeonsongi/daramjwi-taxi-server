@@ -562,7 +562,7 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><div style="font-size:26px;">🐿️</div><span style="font-size:18px;font-weight:900;">다람쥐택시</span></div>
     <div style="font-size:20px;font-weight:800;margin-bottom:2px;">기사님 안녕하세요!</div>
     <div style="font-size:13px;color:rgba(255,255,255,.8);font-weight:500;" id="ahome-date"></div>
-    <div style="font-size:12px;color:rgba(255,255,255,.9);margin-top:6px;" id="ahome-vehicle"></div>
+    <div style="margin-top:10px;padding:10px 14px;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);border-radius:12px;font-size:16px;font-weight:800;color:#fff;display:inline-flex;align-items:center;gap:8px;cursor:pointer;" id="ahome-vehicle" onclick="editMyVehicle()"></div>
   </div>
   <div class="scroller">
     <div style="padding:14px 16px;">
@@ -695,6 +695,22 @@ html,body{height:100%;background:#232018;font-family:-apple-system,'Apple SD Got
   <div class="mhandle"></div>
   <div class="confirm-box"><div class="confirm-q" id="conf-q"></div><div class="confirm-sub" id="conf-sub"></div></div>
   <div class="mft" id="conf-btns"></div>
+</div></div>
+
+<!-- 담당 차량번호 편집 모달 (큰 글씨) -->
+<div class="moverlay" id="mod-vehicle"><div class="msheet">
+  <div class="mhandle"></div>
+  <div style="padding:24px 20px 8px;text-align:center;">
+    <div style="font-size:44px;margin-bottom:8px;">🚗</div>
+    <div style="font-size:22px;font-weight:900;color:#111;margin-bottom:6px;">담당 차량번호</div>
+    <div style="font-size:14px;color:#666;margin-bottom:20px;">번호판을 입력해주세요<br>예) 51허 1234</div>
+    <input id="mv-plate" type="text" placeholder="차량번호 입력" style="width:100%;font-size:26px;font-weight:800;text-align:center;padding:18px 12px;border:3px solid var(--border);border-radius:14px;letter-spacing:1px;">
+    <div id="mv-msg" style="font-size:13px;color:#999;margin-top:10px;">비우고 저장하면 담당이 해제됩니다.</div>
+  </div>
+  <div class="mft" style="display:flex;gap:10px;">
+    <button class="btn bo2" style="flex:1;font-size:16px;padding:14px;" onclick="closeM('mod-vehicle')">취소</button>
+    <button class="btn bg2" style="flex:2;font-size:17px;font-weight:800;padding:14px;background:var(--primary);color:#fff;" onclick="saveMyVehicle()">✓ 저장</button>
+  </div>
 </div></div>
 
 <div class="moverlay" id="mod-req"><div class="msheet">
@@ -1186,16 +1202,26 @@ window.cancelMyRes=async function(id){
   renderMyReservations();
 };
 
-// ─── 기사님 담당 차량 편집 ───
-window.editMyVehicle=async function(){
+// ─── 기사님 담당 차량 편집 (큰 커스텀 모달) ───
+window.editMyVehicle=function(){
   const cur=ME?.profile?.vehicle_plate||'';
-  const np=prompt('담당 차량번호를 입력하세요:\n예) 51허 1234\n\n비우면 담당 해제됩니다.',cur);
-  if(np===null)return; // 취소
-  const body={vehicle_plate:np.trim()||null};
+  $('mv-plate').value=cur;
+  $('mv-msg').textContent=cur?'변경하거나, 비우고 저장하면 담당 해제됩니다.':'비우고 저장하면 담당 해제됩니다.';
+  $('mod-vehicle').classList.add('on');
+  // 모달 열리자마자 입력창 포커스
+  setTimeout(()=>{$('mv-plate').focus();$('mv-plate').select();},50);
+};
+
+window.saveMyVehicle=async function(){
+  const np=$('mv-plate').value.trim();
+  const body={vehicle_plate:np||null};
+  const btn=document.querySelector('#mod-vehicle .bg2');
+  if(btn){btn.disabled=true;btn.textContent='저장 중…';}
   const r=await api('/api/profile',{method:'PATCH',body});
+  if(btn){btn.disabled=false;btn.textContent='✓ 저장';}
   if(r.status===200){
-    toast(np.trim()?('🚗 담당 차량 등록: '+np.trim()):'담당 차량 해제됨');
-    // ME 갱신
+    toast(np?('🚗 담당 차량 등록: '+np):'담당 차량 해제됨');
+    closeM('mod-vehicle');
     const me=await api('/api/auth/me');
     ME=me.json;
     refreshAdminHome();
@@ -1209,15 +1235,12 @@ async function refreshAdminHome(){
   const today=todayStr();
   const d=new Date(today);
   $('ahome-date').textContent=d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+DAYS[d.getDay()]+'요일';
-  // 담당 차량 표시 (번호판 우선, 없으면 A/B 코드). 클릭하면 편집 가능.
+  // 담당 차량 표시 (번호판 우선). 카드 자체 클릭 → 큰 편집 모달 (스타일은 HTML에)
   const plate=ME?.profile?.vehicle_plate;
   const vid=ME?.profile?.vehicle_id;
   const vcode=vid===1?'A':vid===2?'B':null;
-  const label=plate?('🚗 담당 차량: '+plate+' ✎'):(vcode?('🚗 담당 차량: '+vcode+' 차 (번호 미등록 ✎)'):'⚠️ 담당 차량 미설정 — 눌러서 등록 ✎');
+  const label=plate?('🚗 '+plate+' ✎'):(vcode?('🚗 '+vcode+'차 · 번호 등록 ✎'):'⚠️ 담당 차량 미설정 · 눌러서 등록');
   $('ahome-vehicle').textContent=label;
-  $('ahome-vehicle').style.cursor='pointer';
-  $('ahome-vehicle').style.textDecoration='underline';
-  $('ahome-vehicle').onclick=editMyVehicle;
   const dash=await api('/api/admin/dashboard');
   const j=dash.json;
   if(j){
