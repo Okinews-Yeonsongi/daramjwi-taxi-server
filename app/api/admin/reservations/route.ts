@@ -55,10 +55,13 @@ export async function GET(request: Request) {
   if (date) q = q.eq("reservation_date", date);
   // 기본: 오늘 이후만 (과거 신청은 처리 불가). 통계/캘린더용으로는 ?include_past=1 또는 ?date=...
   if (!includePast && !date) q = q.gte("reservation_date", kstTodayString());
-  // 담당 차량 있는 기사님은 자기 차량 예약만 (미배정도 포함). vehicle_id NULL 기사님은 전체 봄.
-  // ?all_vehicles=1 이면 담당 있어도 전체 봄 (관리자 모드)
+  // 배분 정책 (B안):
+  //  - waiting(대기): 담당 관계없이 모두 봄 → 누구든 확정 가능
+  //  - confirmed/cancelled: 자기 vehicle_id 것만 봄 → 확정한 기사님이 담당
+  //  - vehicle_id NULL 기사님(dev-login·초기)은 항상 모든 예약 봄
+  //  - ?all_vehicles=1 → 담당 있어도 관리자 모드로 전체 봄
   if (vehicleId != null && !allVehicles) {
-    q = q.or(`vehicle_id.eq.${vehicleId},vehicle_id.is.null`);
+    q = q.or(`status.eq.waiting,vehicle_id.eq.${vehicleId},vehicle_id.is.null`);
   }
 
   const [resvRes, profRes, locRes, slotRes, vehRes, monthlyMap] = await Promise.all([

@@ -10,7 +10,7 @@ import { notifyResidentConfirmed } from "@/lib/notify";
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const guard = await requireAdmin(request);
   if ("error" in guard) return guard.error;
-  const { auth, db } = guard;
+  const { auth, db, vehicleId: adminVehicleId } = guard;
 
   const { id } = await ctx.params;
   const rid = Number(id);
@@ -20,10 +20,12 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (!r) return apiError("예약을 찾을 수 없어요.", 404);
   if (r.status !== "waiting") return apiError("대기 중인 예약만 확정할 수 있어요.", 400);
 
-  // 한도 검사 — "운행 횟수" 기준(4회/112회). 합승(이미 확정된 같은 운행에 합류)은 한도 소모 안 함.
-  const vehicleId = r.vehicle_id;
+  // 배분 정책(B안): 확정하는 기사님이 담당 차량 있으면 그 차량으로 재배정
+  // 담당 없으면(기사님 vehicle_id=NULL) 원래 배정된 vehicle_id 유지
+  const vehicleId = adminVehicleId ?? r.vehicle_id;
   if (vehicleId == null) return apiError("이 예약에 배정된 차량이 없어요. (관리자 문의)", 409);
 
+  // 한도 검사 — 재배정된 vehicle_id 기준
   const { start, nextStart } = monthBounds(r.reservation_date);
   const { count: sameRunConfirmed } = await db
     .from("reservations")
@@ -33,7 +35,6 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     .eq("hour", r.hour)
     .eq("vehicle_id", vehicleId);
 
-  // 이 확정이 "새 운행"을 만드는 경우에만 한도 검사
   if ((sameRunConfirmed ?? 0) === 0) {
     const [dayRuns, monRuns] = await Promise.all([
       countConfirmedRuns(db, { date: r.reservation_date }),
@@ -48,7 +49,13 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   const nowIso = new Date().toISOString();
   const { data: updated } = await db
     .from("reservations")
-    .update({ status: "confirmed", confirmed_at: nowIso, confirmed_by: auth.user.id, updated_at: nowIso })
+    .update({
+      status: "confirmed",
+      confirmed_at: nowIso,
+      confirmed_by: auth.user.id,
+      vehicle_id: vehicleId, // ← 확정 시 기사님 차량으로 재배정 (B안)
+      updated_at: nowIso,
+    })
     .eq("id", rid)
     .eq("status", "waiting")
     .select("*")
