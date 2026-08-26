@@ -1487,12 +1487,13 @@ window.moveWeek=function(d){weekBase=new Date(weekBase.getTime()+d*7*86400000);w
 window.selWeekDay=async function(s){weekSel=s;renderMonthly();showWeekDetail(s);};
 async function showWeekDetail(s){
   const d=new Date(s);$('week-detail-hd').textContent='📅 '+(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일 ('+DAYS[d.getUTCDay()]+'요일)';
-  const r=await api('/api/admin/reservations?date='+s);
-  const list=(r.json?.reservations||[]).filter(x=>x.effective_status!=='cancelled');
+  // 월별 캘린더는 '확정 이상'만 표시 (대기는 대기 탭에서 관리)
+  const r=await api('/api/admin/reservations?date='+s+'&status=confirmed');
+  const list=r.json?.reservations||[];
   const today=todayStr();
   const isToday=(s===today);
   // 오늘 날짜면 액션 버튼 활성(편집 가능), 과거·미래면 조회만
-  $('week-detail-list').innerHTML=list.length?list.map(x=>tripCardHTML(x,isToday)).join(''):'<div class="empty">이날 신청이 없어요</div>';
+  $('week-detail-list').innerHTML=list.length?list.map(x=>tripCardHTML(x,isToday)).join(''):'<div class="empty">이날 확정 운행이 없어요</div>';
   $('week-detail').style.display='block';
 }
 
