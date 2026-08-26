@@ -6,8 +6,10 @@ import type { Database } from "@/lib/supabase/types";
 
 /**
  * 차량번호(plate)를 받아서 vehicles와 매칭하고 vehicle_id 반환.
- * 매칭되는 row 있으면 그 id, 없으면 빈 slot(plate_number NULL)에 등록해서 그 id.
- * 빈 slot 없으면 null 반환 (차량 초과).
+ * 우선순위:
+ *  1) 같은 번호 이미 등록되어 있으면 그 id
+ *  2) 빈 slot (plate_number NULL, 초기 A/B 등)에 등록
+ *  3) 그것도 없으면 새 vehicles row 자동 생성 → 차량 무제한 확장
  */
 async function resolveVehicleByPlate(plate: string): Promise<number | null> {
   const admin = createAdminClient();
@@ -31,10 +33,22 @@ async function resolveVehicleByPlate(plate: string): Promise<number | null> {
     .order("id", { ascending: true })
     .limit(1)
     .maybeSingle();
-  if (!empty) return null; // 빈 자리 없음
+  if (empty) {
+    await admin.from("vehicles").update({ plate_number: trimmed }).eq("id", empty.id);
+    return empty.id;
+  }
 
-  await admin.from("vehicles").update({ plate_number: trimmed }).eq("id", empty.id);
-  return empty.id;
+  // 3) 빈 slot도 없으면 새 vehicles row 자동 생성 (차량 대수 확장)
+  const { data: created, error } = await admin
+    .from("vehicles")
+    .insert({ plate_number: trimmed, is_active: true })
+    .select("id")
+    .single();
+  if (error) {
+    console.error("[vehicle create] 실패:", error.message);
+    return null;
+  }
+  return created.id;
 }
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];

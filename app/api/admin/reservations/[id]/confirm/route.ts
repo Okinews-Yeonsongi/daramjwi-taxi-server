@@ -10,7 +10,7 @@ import { notifyResidentConfirmed } from "@/lib/notify";
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const guard = await requireAdmin(request);
   if ("error" in guard) return guard.error;
-  const { auth, db, vehicleId: adminVehicleId } = guard;
+  const { auth, db } = guard;
 
   const { id } = await ctx.params;
   const rid = Number(id);
@@ -20,12 +20,12 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (!r) return apiError("예약을 찾을 수 없어요.", 404);
   if (r.status !== "waiting") return apiError("대기 중인 예약만 확정할 수 있어요.", 400);
 
-  // 배분 정책(B안): 확정하는 기사님이 담당 차량 있으면 그 차량으로 재배정
-  // 담당 없으면(기사님 vehicle_id=NULL) 원래 배정된 vehicle_id 유지
-  const vehicleId = adminVehicleId ?? r.vehicle_id;
+  // 배분 정책(D안): vehicle_id 재배정 없음 (매트릭스 안전).
+  //   확정 → confirmed_by에 기사님 id 저장 → 그 값으로 담당 필터.
+  const vehicleId = r.vehicle_id;
   if (vehicleId == null) return apiError("이 예약에 배정된 차량이 없어요. (관리자 문의)", 409);
 
-  // 한도 검사 — 재배정된 vehicle_id 기준
+  // 한도 검사 — 원래 배정된 vehicle_id 기준 (매트릭스 정합성)
   const { start, nextStart } = monthBounds(r.reservation_date);
   const { count: sameRunConfirmed } = await db
     .from("reservations")
@@ -52,9 +52,9 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     .update({
       status: "confirmed",
       confirmed_at: nowIso,
-      confirmed_by: auth.user.id,
-      vehicle_id: vehicleId, // ← 확정 시 기사님 차량으로 재배정 (B안)
+      confirmed_by: auth.user.id, // ← 확정한 기사님 id (담당 표시)
       updated_at: nowIso,
+      // vehicle_id 는 변경하지 않음 (매트릭스 유지)
     })
     .eq("id", rid)
     .eq("status", "waiting")

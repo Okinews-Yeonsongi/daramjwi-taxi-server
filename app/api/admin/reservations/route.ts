@@ -35,7 +35,7 @@ const BOOK_ERRORS: Record<string, { msg: string; status: number }> = {
 export async function GET(request: Request) {
   const guard = await requireAdmin(request);
   if ("error" in guard) return guard.error;
-  const { db, vehicleId } = guard;
+  const { auth, db, vehicleId } = guard;
 
   const url = new URL(request.url);
   const status = url.searchParams.get("status");
@@ -55,13 +55,16 @@ export async function GET(request: Request) {
   if (date) q = q.eq("reservation_date", date);
   // 기본: 오늘 이후만 (과거 신청은 처리 불가). 통계/캘린더용으로는 ?include_past=1 또는 ?date=...
   if (!includePast && !date) q = q.gte("reservation_date", kstTodayString());
-  // 배분 정책 (B안):
+  // 배분 정책 (D안 — 매트릭스 안전):
   //  - waiting(대기): 담당 관계없이 모두 봄 → 누구든 확정 가능
-  //  - confirmed/cancelled: 자기 vehicle_id 것만 봄 → 확정한 기사님이 담당
+  //  - confirmed/cancelled: 자기 vehicle_id 매칭 OR 자기가 확정한 것(confirmed_by)
+  //  - vehicle_id는 재배정 안 함 (매트릭스 정합성 유지)
   //  - vehicle_id NULL 기사님(dev-login·초기)은 항상 모든 예약 봄
   //  - ?all_vehicles=1 → 담당 있어도 관리자 모드로 전체 봄
   if (vehicleId != null && !allVehicles) {
-    q = q.or(`status.eq.waiting,vehicle_id.eq.${vehicleId},vehicle_id.is.null`);
+    q = q.or(
+      `status.eq.waiting,vehicle_id.eq.${vehicleId},vehicle_id.is.null,confirmed_by.eq.${auth.user.id}`
+    );
   }
 
   const [resvRes, profRes, locRes, slotRes, vehRes, monthlyMap] = await Promise.all([

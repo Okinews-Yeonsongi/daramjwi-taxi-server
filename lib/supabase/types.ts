@@ -16,7 +16,8 @@ export type Json =
 export type LocationCategory = "cheongsanmyeon" | "eupnae";
 export type UserRole = "resident" | "admin";
 export type UserStatus = "active" | "suspended";
-export type VehicleCode = "A" | "B";
+// code는 이제 자유 텍스트 (0017 CHECK 제거). null 허용.
+export type VehicleCode = string;
 export type ReservationStatus =
   | "waiting"
   | "confirmed"
@@ -102,9 +103,9 @@ export interface Database {
         Relationships: [];
       };
       vehicles: {
-        Row: { id: number; code: VehicleCode; is_active: boolean; plate_number: string | null };
-        Insert: { id?: number; code: VehicleCode; is_active?: boolean; plate_number?: string | null };
-        Update: { id?: number; code?: VehicleCode; is_active?: boolean; plate_number?: string | null };
+        Row: { id: number; code: VehicleCode | null; is_active: boolean; plate_number: string | null };
+        Insert: { id?: number; code?: VehicleCode | null; is_active?: boolean; plate_number?: string | null };
+        Update: { id?: number; code?: VehicleCode | null; is_active?: boolean; plate_number?: string | null };
         Relationships: [];
       };
       locations: {
