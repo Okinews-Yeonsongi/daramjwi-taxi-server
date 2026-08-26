@@ -1440,7 +1440,8 @@ window.editFare=async function(id,cur){
 };
 window.uploadReceipt=function(id){
   const inp=document.createElement('input');
-  inp.type='file';inp.accept='image/*';inp.capture='environment';
+  inp.type='file';inp.accept='image/*';
+  // capture 미지정 → 모바일에서 '카메라·갤러리·파일' 선택 팝업 자동 표시
   inp.onchange=async ()=>{
     const file=inp.files?.[0];if(!file)return;
     toast('📤 업로드 중…');
